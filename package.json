@@ -1,0 +1,27 @@
+{
+  "name": "third-chair",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": { "node": ">=24 <25" },
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "source-pack": "npm run source-pack --workspace @third-chair/source-pack --",
+    "dev:server": "npm run dev --workspace @third-chair/server",
+    "dev:widget": "npm run dev --workspace @third-chair/widget",
+    "eval": "tsx evals/run.ts",
+    "verify:private": "node scripts/verify-private-boundary.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.3",
+    "typescript": "^5.9.2",
+    "vitest": "^4.0.0",
+    "zod": "^4.0.0"
+  }
+}

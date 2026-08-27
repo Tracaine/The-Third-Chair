@@ -1,0 +1,13 @@
+{
+  "name": "@third-chair/storage",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./test/fixtures": "./test/fixtures.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "tsc -p tsconfig.json"
+  }
+}

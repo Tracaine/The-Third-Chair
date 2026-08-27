@@ -1,0 +1,17 @@
+/project_sources/
+/private/
+/data/
+/tmp/
+/.worktrees/
+/.env
+*.pdf
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.ocr.pdf
+*.sidecar.txt
+evals/results/*.json
+!evals/results/.gitignore
+node_modules/
+dist/
+coverage/
