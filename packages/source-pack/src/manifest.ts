@@ -59,11 +59,14 @@ const defaultDependencies: VerifyDependencies = {
     return Number(match[1]);
   },
   async toolVersion(tool) {
-    const flag = tool === "pdftotext" || tool === "pdftoppm" ? "-v" : "--version";
-    const output = await runProcess(tool, [flag]);
+    const output = await runProcess(tool, toolVersionArguments(tool));
     return (output.stdout || output.stderr).split(/\r?\n/, 1)[0]!.trim();
   },
 };
+
+export function toolVersionArguments(tool: string): string[] {
+  return [tool === "pdfinfo" || tool === "pdftotext" || tool === "pdftoppm" ? "-v" : "--version"];
+}
 
 export function hashManifest(manifest: Record<string, unknown>): string {
   const docs = Array.isArray(manifest.documents)
