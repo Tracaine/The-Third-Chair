@@ -19,6 +19,8 @@ The build output tree was cleaned before verification so no generated declaratio
 
 Generated JavaScript, declarations, source maps, and TypeScript build metadata are confined to ignored `dist/` directories. Previously tracked compiler output beside TypeScript source was removed.
 
+Historical `.bak`, `.log`, and generated `.zip` artifacts were removed from source control and are ignored for future checkpoints.
+
 ## Direct HTTP and MCP smoke
 
 A fake-mode server was started against a temporary campaign database outside the repository. The official MCP SDK client exercised separate stateless HTTP POST requests through this lifecycle:

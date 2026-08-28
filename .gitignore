@@ -15,3 +15,6 @@ evals/results/*.json
 node_modules/
 dist/
 coverage/
+*.bak
+*.log
+*.zip
