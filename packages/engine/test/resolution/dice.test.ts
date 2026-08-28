@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { deterministicDie, resolvePlan } from "@third-chair/engine";
+import type { ResolutionPlan } from "@third-chair/contracts";
 
 const seed = new Uint8Array(32);
-const plan = { id: "test_plan", checks: [{ id: "test_check", actorId: "test_actor", checkKind: "Check", key: "skill", sides: 20, advantage: "ADVANTAGE" as const, advantageReason: "help", modifier: 2, dc: 12, visibility: "PUBLIC" as const, successStakes: "open", failureStakes: "cost", permittedOutcomeTiers: ["SUCCESS", "FAILURE"], citations: [] }] };
+const plan: ResolutionPlan = { id: "test_plan", checks: [{ id: "test_check", actorId: "test_actor", checkKind: "Check", key: "skill", sides: 20, advantage: "ADVANTAGE" as const, advantageReason: "help", modifier: 2, dc: 12, visibility: "PUBLIC" as const, successStakes: "open", failureStakes: "cost", permittedOutcomeTiers: ["SUCCESS", "FAILURE"], citations: [] }] };
 describe("deterministic dice", () => {
   it("uses fixed HMAC vectors", () => {
     expect(deterministicDie(seed, "camp_test", 0, 0, 20)).toBe(9);
