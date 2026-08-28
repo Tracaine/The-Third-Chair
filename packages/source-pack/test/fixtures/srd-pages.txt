@@ -1,0 +1,23 @@
+SRD 5.1
+1
+
+ADVANTAGE AND DISADVANTAGE
+
+Sometimes a special ability or situation says an ability check has advantage.
+
+Roll | Keep
+2d20 | Higher
+SRD 5.1
+2
+
+If circumstances cause both advantage and disadvantage, neither applies.
+
+CONCENTRATION
+
+Taking damage can break concentration.
+SRD 5.1
+3
+
+LONG REST
+
+A long rest is a period of extended downtime.

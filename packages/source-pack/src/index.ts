@@ -3,3 +3,6 @@ export * from "./process.js";
 export * from "./indexing/database.js";
 export * from "./indexing/types.js";
 export * from "./indexing/writer.js";
+export * from "./extraction/pdf-text.js";
+export * from "./parsing/page-stream.js";
+export * from "./parsing/srd.js";
