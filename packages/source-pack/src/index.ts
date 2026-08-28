@@ -11,3 +11,5 @@ export * from "./parsing/grand-history.js";
 export * from "./indexing/timeline.js";
 export * from "./extraction/ocr.js";
 export * from "./parsing/frcs.js";
+export * from "./indexing/entities.js";
+export * from "./indexing/edition-boundary.js";

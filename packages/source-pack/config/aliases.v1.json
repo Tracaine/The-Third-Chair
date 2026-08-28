@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "entities": [
+    { "id": "dalelands", "canonicalName": "Dalelands", "entityType": "REGION", "region": "Dalelands", "aliases": ["the Dales"] },
+    { "id": "zhentarim", "canonicalName": "Zhentarim", "entityType": "ORGANIZATION", "aliases": ["Zhents"] },
+    { "id": "harpers", "canonicalName": "Harpers", "entityType": "ORGANIZATION", "aliases": ["Those Who Harp"] },
+    { "id": "cormanthor", "canonicalName": "Cormanthor", "entityType": "REGION", "aliases": ["Elven Court"] },
+    { "id": "moonsea", "canonicalName": "Moonsea", "entityType": "REGION", "aliases": ["Moonsea North"] },
+    { "id": "shadowdale", "canonicalName": "Shadowdale", "entityType": "SETTLEMENT", "region": "Dalelands", "aliases": [] },
+    { "id": "daggerdale", "canonicalName": "Daggerdale", "entityType": "REGION", "region": "Dalelands", "aliases": [] }
+  ]
+}
