@@ -12,7 +12,7 @@ import { assertSourcePackIntegrity, openSourcePackForBuild, openSourcePackReadOn
 import { buildTimelineEdges } from "./indexing/timeline.js";
 import type { SourceDocumentRecord } from "./indexing/types.js";
 import { SourcePackWriter } from "./indexing/writer.js";
-import { loadSourceConfig, verifySourceDocuments } from "./manifest.js";
+import { hashIdentityConfig, loadSourceConfig, verifySourceDocuments } from "./manifest.js";
 import { parseFrcsPages } from "./parsing/frcs.js";
 import { parseGrandHistoryPages } from "./parsing/grand-history.js";
 import { parseSrdPages } from "./parsing/srd.js";
@@ -23,7 +23,6 @@ import { promoteSourcePack } from "./promote.js";
 async function fileHash(path: string): Promise<string> {
   const hash = createHash("sha256"); for await (const chunk of createReadStream(path)) hash.update(chunk as Buffer); return hash.digest("hex");
 }
-const valueHash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
 export async function buildAtomically<T>(destination: string, assemble: (pendingPath: string, buildDir: string) => Promise<T>): Promise<T> {
   await mkdir(dirname(destination), { recursive: true });
@@ -45,7 +44,7 @@ export interface SourcePackBuildReport {
 
 export async function buildSourcePack(options: BuildSourcePackOptions): Promise<SourcePackBuildReport> {
   const config = await loadSourceConfig(resolve(options.repositoryRoot, options.configPath));
-  const selectionHash = valueHash(selection); const aliasHash = valueHash(aliases);
+  const selectionHash = hashIdentityConfig(selection); const aliasHash = hashIdentityConfig(aliases);
   const verified = await verifySourceDocuments(config, options.repositoryRoot, undefined, { selectionHash, aliasHash });
   const destination = resolve(options.repositoryRoot, options.outputPath);
   const report = await buildAtomically(destination, async (pending, buildDir): Promise<SourcePackBuildReport> => {

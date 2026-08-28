@@ -6,6 +6,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import {
   hashManifest,
+  hashIdentityConfig,
   verifySourceDocuments,
   type SourceDocumentConfig,
 } from "../src/manifest.js";
@@ -70,5 +71,13 @@ describe("source manifest verification", () => {
     const a = { schemaVersion: 1, selectionHash: "s", documents: [{ id: "x", sha256: "h", pageCount: 1, edition: "SRD_5_1" }], aliasHash: "a", builtAtUtc: "today" };
     const b = { builtAtUtc: "tomorrow", aliasHash: "a", documents: [{ edition: "SRD_5_1", pageCount: 1, sha256: "h", id: "x" }], selectionHash: "s", schemaVersion: 1 };
     expect(hashManifest(a)).toBe(hashManifest(b));
+  });
+
+  test("produces explicit, distinct identity hashes for selection and alias configs", () => {
+    const selectionHash = hashIdentityConfig({ ranges: [76, 97] });
+    const aliasHash = hashIdentityConfig({ aliases: ["Zhents"] });
+    expect(selectionHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(aliasHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(selectionHash).not.toBe(aliasHash);
   });
 });

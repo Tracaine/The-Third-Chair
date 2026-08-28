@@ -45,6 +45,8 @@ const canonical = (value: unknown): string => {
 
 const digest = (text: string | Buffer) => createHash("sha256").update(text).digest("hex");
 
+export function hashIdentityConfig(value: unknown): string { return digest(JSON.stringify(value)); }
+
 async function hashFile(path: string): Promise<string> {
   const hash = createHash("sha256");
   for await (const chunk of createReadStream(path)) hash.update(chunk as Buffer);

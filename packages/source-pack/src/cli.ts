@@ -1,9 +1,10 @@
 import { resolve } from "node:path";
 import aliases from "../config/aliases.v1.json" with { type: "json" };
+import selection from "../config/frcs-selection.v1.json" with { type: "json" };
 import cases from "../test/fixtures/retrieval-cases.json" with { type: "json" };
 import { buildSourcePack } from "./build.js";
 import { openSourcePackReadOnly } from "./indexing/database.js";
-import { loadSourceConfig, verifySourceDocuments } from "./manifest.js";
+import { hashIdentityConfig, loadSourceConfig, verifySourceDocuments } from "./manifest.js";
 import { parseRetrievalCases, runRetrievalFixtures } from "./retrieval/fixtures.js";
 import { SqliteSourcePackService } from "./retrieval/service.js";
 
@@ -32,7 +33,9 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
   const root = process.env.INIT_CWD ?? resolve(import.meta.dirname, "../../..");
   if (args.command === "verify") {
     const config = await loadSourceConfig(resolve(root, args.config));
-    const { manifest } = await verifySourceDocuments(config, root);
+    const { manifest } = await verifySourceDocuments(config, root, undefined, {
+      selectionHash: hashIdentityConfig(selection), aliasHash: hashIdentityConfig(aliases),
+    });
     process.stdout.write(`${JSON.stringify({ status: "PASS", sourcePackManifestHash: manifest.sourcePackManifestHash })}\n`);
     return;
   }
