@@ -6,3 +6,6 @@ export * from "./indexing/writer.js";
 export * from "./extraction/pdf-text.js";
 export * from "./parsing/page-stream.js";
 export * from "./parsing/srd.js";
+export * from "./parsing/dates.js";
+export * from "./parsing/grand-history.js";
+export * from "./indexing/timeline.js";
