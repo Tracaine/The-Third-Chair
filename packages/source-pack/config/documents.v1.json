@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "documents": [
+    {
+      "id": "srd-5.1",
+      "title": "SRD-OGL_V5.1",
+      "path": "project_sources/01-SRD-OGL_V5.1.pdf",
+      "sha256": "d3f94417d2532f42a5abaec07e71a59007bf6cc46992c6458be6667f7a9f1e34",
+      "pageCount": 403,
+      "edition": "SRD_5_1",
+      "permittedKinds": ["MECHANICS"],
+      "method": "PDF_TEXT"
+    },
+    {
+      "id": "grand-history",
+      "title": "The Grand History of the Realms",
+      "path": "project_sources/02-The-Grand-History-of-the-Realms-Forgotten-Realms-.pdf",
+      "sha256": "a9bfa3139e7a63af6135f3ccfebb679fc63b6cf53f1d3f7dc70289b5b5078c09",
+      "pageCount": 162,
+      "edition": "FORGOTTEN_REALMS",
+      "permittedKinds": ["TIMELINE", "LORE"],
+      "method": "PDF_TEXT"
+    },
+    {
+      "id": "frcs-3e",
+      "title": "Forgotten Realms Campaign Setting 3rd Edition",
+      "path": "project_sources/03-Forgotten-Realms-Campaign-Setting-3rd-Edition.pdf",
+      "sha256": "5c550326746e77bddaa15d054e2ea592b74f5f26ea1e0731ad4ae793f1fd82ca",
+      "pageCount": 320,
+      "edition": "FRCS_3E_LORE_ONLY",
+      "permittedKinds": ["LORE"],
+      "method": "SELECTIVE_OCR"
+    }
+  ]
+}

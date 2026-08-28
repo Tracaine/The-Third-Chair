@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "confidenceThreshold": 85,
+  "ranges": [
+    { "id": "life-in-faerun", "pdfStart": 76, "pdfEnd": 97, "printedStart": 76, "printedEnd": 97, "mappingAnchors": ["Faerunian", "Calendar of Harptos"] },
+    { "id": "dalelands", "pdfStart": 116, "pdfEnd": 140, "printedStart": 116, "printedEnd": 140, "mappingAnchors": ["Dalelands", "Dales Compact"] },
+    { "id": "deities-history-organizations", "pdfStart": 232, "pdfEnd": 283, "printedStart": 232, "printedEnd": 283, "mappingAnchors": ["deities", "patron deities"] }
+  ]
+}
