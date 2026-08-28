@@ -15,3 +15,6 @@ export * from "./indexing/entities.js";
 export * from "./indexing/edition-boundary.js";
 export * from "./retrieval/query.js";
 export * from "./retrieval/service.js";
+export * from "./retrieval/fixtures.js";
+export * from "./build.js";
+export * from "./promote.js";

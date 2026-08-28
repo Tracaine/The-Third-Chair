@@ -1,0 +1,13 @@
+[
+  { "id": "rule-advantage", "kind": "RULE", "query": "advantage", "edition": "SRD_5_1" },
+  { "id": "rule-concentration", "kind": "RULE", "query": "concentration", "edition": "SRD_5_1" },
+  { "id": "rule-long-rest", "kind": "RULE", "query": "long rest", "edition": "SRD_5_1" },
+  { "id": "rule-death-saves", "kind": "RULE", "query": "death saving throws", "edition": "SRD_5_1" },
+  { "id": "rule-cover", "kind": "RULE", "query": "cover", "edition": "SRD_5_1" },
+  { "id": "lore-shadowdale", "kind": "LORE", "query": "Shadowdale", "edition": "FRCS_3E_LORE_ONLY" },
+  { "id": "lore-daggerdale", "kind": "LORE", "query": "Daggerdale", "edition": "FRCS_3E_LORE_ONLY" },
+  { "id": "lore-zhentarim", "kind": "LORE", "query": "Zhentarim", "edition": "FRCS_3E_LORE_ONLY" },
+  { "id": "lore-cormanthor", "kind": "LORE", "query": "Cormanthor", "edition": "FRCS_3E_LORE_ONLY" },
+  { "id": "lore-harpers", "kind": "LORE", "query": "Harpers", "edition": "FRCS_3E_LORE_ONLY" },
+  { "id": "timeline-1375", "kind": "TIMELINE", "toDr": 1375, "edition": "FORGOTTEN_REALMS" }
+]

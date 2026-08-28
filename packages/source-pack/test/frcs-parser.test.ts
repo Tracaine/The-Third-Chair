@@ -20,4 +20,10 @@ describe("FRCS lore-only parsing", () => {
     expect(result.chunks.map((item) => item.text).join(" ")).toContain("Zhentarim");
     expect(result.chunks.map((item) => item.text).join(" ")).not.toMatch(/Prestige Class|Feat:|Spell Level|armor bonus/i);
   });
+
+  test("gives repeated OCR paragraphs distinct deterministic chunk identities", () => {
+    const result = parseFrcsPages([{ page: 250, text: "ORGANIZATIONS\n\nA repeated footer.\n\nA repeated footer.", meanConfidence: 91, status: "HIGH_CONFIDENCE" }]);
+    expect(result.chunks).toHaveLength(2);
+    expect(new Set(result.chunks.map((item) => item.id)).size).toBe(2);
+  });
 });

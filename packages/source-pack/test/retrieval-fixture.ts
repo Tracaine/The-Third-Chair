@@ -17,15 +17,17 @@ export function createRetrievalFixture(): { db: DatabaseSync; service: SqliteSou
   const db = openSourcePackForBuild(":memory:"); const writer = new SourcePackWriter(db);
   documents.forEach((document) => writer.insertDocument(document));
   writer.insertManifest({ sourcePackManifestHash: "fixture-manifest" });
+  const ruleTerms = ["advantage", "concentration", "long rest", "death saving throws", "cover"];
   const rules: SourceChunk[] = Array.from({ length: 10 }, (_, index) => ({ id: `rule-${index}`, documentId: "srd-5.1",
-    pageStart: index + 1, pageEnd: index + 1, headingPath: ["Advantage"], edition: "SRD_5_1", contentKind: "MECHANICS",
-    confidenceStatus: "NATIVE_TEXT", text: `Advantage rule passage ${index} ${"x".repeat(1800)}`, textSha256: hash(index + 1) }));
+    pageStart: index + 1, pageEnd: index + 1, headingPath: [index < 6 ? "Advantage" : ruleTerms[index % ruleTerms.length]!], edition: "SRD_5_1", contentKind: "MECHANICS",
+    confidenceStatus: "NATIVE_TEXT", text: `${index < 6 ? "advantage" : ruleTerms[index % ruleTerms.length]} rule passage ${index} ${"x".repeat(1800)}`, textSha256: hash(index + 1) }));
   writer.insertChunks(rules);
   writer.insertRuleSections(rules.map((chunk, index) => ({ id: `section-${index}`, chunkId: chunk.id, ruleKey: "advantage-and-disadvantage", category: "checks" })));
+  const loreTerms = ["Shadowdale", "Daggerdale", "Zhentarim Zhents", "Cormanthor", "Harpers"];
   const lore: SourceChunk[] = Array.from({ length: 12 }, (_, index) => ({ id: `lore-${index}`, documentId: "frcs-3e",
     pageStart: 116 + index, pageEnd: 116 + index, headingPath: ["The Dalelands"], edition: "FRCS_3E_LORE_ONLY", contentKind: "LORE",
     region: "Dalelands", dateEndDr: 1375, ocrConfidence: 90, confidenceStatus: "HIGH_CONFIDENCE",
-    text: `The Zhents and Harpers influence Shadowdale lore passage ${index}.`, textSha256: hash(20 + index) }));
+    text: `${loreTerms[index % loreTerms.length]} influence the Dalelands lore passage ${index}.`, textSha256: hash(20 + index) }));
   writer.insertChunks(lore);
   writer.insertChunks([{ id: "low-number", documentId: "frcs-3e", pageStart: 140, pageEnd: 140, headingPath: ["The Dalelands"],
     edition: "FRCS_3E_LORE_ONLY", contentKind: "LORE", ocrConfidence: 70, confidenceStatus: "LOW_CONFIDENCE",

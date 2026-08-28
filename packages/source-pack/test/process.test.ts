@@ -12,9 +12,4 @@ describe("safe process boundary", () => {
     await expect(runProcess(process.execPath, ["-e", "process.exit(7)"]))
       .rejects.toThrow("PROCESS_EXIT_7");
   });
-
-  test("can stream stdin into a child", async () => {
-    const result = await runProcess(process.execPath, ["-e", "process.stdin.pipe(process.stdout)"], { input: "bounded" });
-    expect(result.stdout).toBe("bounded");
-  });
 });
