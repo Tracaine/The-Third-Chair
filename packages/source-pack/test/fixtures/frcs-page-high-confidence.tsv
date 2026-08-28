@@ -1,0 +1,5 @@
+level	page_num	block_num	par_num	line_num	word_num	left	top	width	height	conf	text
+5	1	1	1	1	1	10	10	20	10	90.00	The
+5	1	1	1	1	2	35	10	60	10	90.00	Dalelands
+5	1	1	1	2	1	10	25	30	10	90.00	stand
+5	1	1	2	1	1	10	50	30	10	90.00	apart.
