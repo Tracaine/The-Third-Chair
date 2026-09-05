@@ -23,6 +23,9 @@ export interface AgentRunOptions<TContext> {
   readonly context: TContext;
   readonly maxTurns: number;
   readonly signal: AbortSignal;
+  readonly toolExecution?: { readonly maxFunctionToolConcurrency: number };
+  /** Name-only application event; no SDK context, arguments, output, or history. */
+  readonly onToolInvoked?: (name: string) => void;
 }
 
 interface AgentsSdkResult {
@@ -89,7 +92,17 @@ export class AgentsSdkRunClient implements AgentRunClient {
     input: string,
     options: AgentRunOptions<TContext>,
   ): Promise<AgentRunResult> {
-    const result = await this.#runner.run(agent, input, options);
+    const { onToolInvoked, ...sdkOptions } = options;
+    const reportTool: Parameters<typeof agent.on<"agent_tool_start">>[1] = (_context, tool) => {
+      if (agent.tools.includes(tool)) onToolInvoked?.(tool.name);
+    };
+    agent.on("agent_tool_start", reportTool);
+    let result: AgentsSdkResult;
+    try {
+      result = await this.#runner.run(agent, input, sdkOptions);
+    } finally {
+      agent.off("agent_tool_start", reportTool);
+    }
     const usage = result.state.usage;
 
     return {

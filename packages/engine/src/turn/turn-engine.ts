@@ -52,7 +52,9 @@ export function createTurnEngine(deps: TurnEngineDeps): TurnEngine {
         return result;
       };
       deps.failureInjector?.check("PROCESSING");
-      const proposal = TurnProposalSchema.parse(await deps.director.propose({ state: turn.beforeState, intents: turn.lockedIntents, runtime: { lockAndResolveChecks } }));
+      const proposal = TurnProposalSchema.parse(await deps.director.propose({ turnId: turn.id, state: turn.beforeState, intents: turn.lockedIntents,
+        persistedPlan: turn.resolutionPlan === null ? null : ResolutionPlanSchema.parse(turn.resolutionPlan),
+        persistedResolutions: resolved, runtime: { lockAndResolveChecks } }));
       if (nextRngCounter === null) throw new Error("DIRECTOR_DID_NOT_RESOLVE_CHECKS");
       const nextDecision = deriveDecisionAuthority(turn.beforeState, proposal.nextDecision);
       const applied = applyOperationsToClone(turn.beforeState, [...proposal.uncontestedOperations, ...proposal.checkLinkedOperations], { intents: turn.lockedIntents, resolutions: resolved });
