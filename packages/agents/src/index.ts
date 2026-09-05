@@ -7,3 +7,4 @@ export * from "./context/narrator-context.js";
 export * from "./context/serialize.js";
 export * from "./tools/index.js";
 export * from "./director.js";
+export * from "./repair.js";

@@ -2,7 +2,7 @@ import {
   AdvanceGameCommandSchema, CheckResolutionSchema, ResolutionPlanSchema, TurnProposalSchema,
   type AdvanceGameCommand, type CheckResolution, type ResolutionPlan, type TurnProposal,
 } from "@third-chair/contracts";
-import type { CampaignRepository, TurnRecord, TurnRepository } from "@third-chair/storage";
+import type { CampaignRepository, JsonValue, TurnRecord, TurnRepository } from "@third-chair/storage";
 import { sha256Json } from "../hash.js";
 import { applyOperationsToClone } from "../operations/apply.js";
 import { projectPlayerView } from "../projection/player-view.js";
@@ -10,12 +10,21 @@ import { resolvePlan } from "../resolution/dice.js";
 import { KeyedMutex } from "../mutex.js";
 import { deriveDecisionAuthority } from "./decision-policy.js";
 import { finalizeCandidateForCommit } from "./finalize-candidate.js";
-import { NarrationSchema, type DirectorPort, type NarratorPort } from "./ports.js";
+import { InvalidDirectorProposalError, NarrationSchema, type DirectorPort, type DirectorRepairIssue, type NarratorPort } from "./ports.js";
 
 export interface AdvanceGameResult { readonly kind: "COMMITTED" | "ACTIVE_SUCCESSOR"; readonly turn: TurnRecord; readonly view: ReturnType<typeof projectPlayerView>; readonly visibleRolls: readonly CheckResolution[]; readonly narration: unknown; }
 export interface TurnEngineDeps { readonly campaigns: CampaignRepository; readonly turns: TurnRepository; readonly director: DirectorPort; readonly narrator: NarratorPort; readonly newTurnId?: () => string; readonly failureInjector?: { check(stage: string): void }; }
 function nextId(): string { return `test_turn_${crypto.randomUUID().replaceAll("-", "_")}`; }
 function parseResolutions(turn: TurnRecord): readonly CheckResolution[] { return (turn.resolutions ?? []).map((value) => CheckResolutionSchema.parse(value)); }
+function safeIssue(error: unknown): DirectorRepairIssue {
+  const message = error instanceof Error && /^[A-Z][A-Z0-9_]{2,100}$/.test(error.message)
+    ? error.message : "DIRECTOR_PROPOSAL_INVALID";
+  return { path: "/", message };
+}
+function safeRepairValue(value: unknown): unknown {
+  try { return JSON.parse(JSON.stringify(value ?? null)) as unknown; }
+  catch { return null; }
+}
 export interface TurnEngine { advanceGame(command: AdvanceGameCommand): Promise<AdvanceGameResult>; }
 export function createTurnEngine(deps: TurnEngineDeps): TurnEngine {
   const mutex = new KeyedMutex();
@@ -59,24 +68,93 @@ export function createTurnEngine(deps: TurnEngineDeps): TurnEngine {
         return { planId: plan.id, ...result, reused: false };
       };
       deps.failureInjector?.check("PROCESSING");
-      const proposal = TurnProposalSchema.parse(await deps.director.propose({ turnId: turn.id, state: turn.beforeState, intents: turn.lockedIntents,
+      const directorInput = { turnId: turn.id, state: turn.beforeState, intents: turn.lockedIntents,
         persistedPlan: turn.resolutionPlan === null ? null : ResolutionPlanSchema.parse(turn.resolutionPlan),
-        persistedResolutions: resolved, runtime: { lockAndResolveChecks } }));
-      if (nextRngCounter === null) {
-        if (turn.resolutionPlan !== null || proposal.checkLinkedOperations.length > 0
-          || proposal.narrativeBrief.requiredResolutionIds.length > 0) {
+        persistedResolutions: resolved, runtime: { lockAndResolveChecks } };
+
+      const evaluate = (rawProposal: unknown) => {
+        const parsed = TurnProposalSchema.safeParse(rawProposal);
+        if (!parsed.success) {
+          throw new InvalidDirectorProposalError(rawProposal,
+            parsed.error.issues.slice(0, 20).map((issue) => ({
+              path: `/${issue.path.map((part) => String(part).replaceAll("~", "~0").replaceAll("/", "~1")).join("/")}`,
+              message: "INVALID_VALUE",
+            })));
+        }
+        const proposal = parsed.data;
+        const noCheck = nextRngCounter === null;
+        if (noCheck && (turn.resolutionPlan !== null || proposal.checkLinkedOperations.length > 0
+          || proposal.narrativeBrief.requiredResolutionIds.length > 0)) {
           throw new Error("DIRECTOR_DID_NOT_RESOLVE_CHECKS");
         }
+        const counter = nextRngCounter ?? turn.beforeState.metadata.rngCounter;
+        const nextDecision = deriveDecisionAuthority(turn.beforeState, proposal.nextDecision);
+        const applied = applyOperationsToClone(turn.beforeState,
+          [...proposal.uncontestedOperations, ...proposal.checkLinkedOperations],
+          { intents: turn.lockedIntents, resolutions: resolved });
+        const finalized = finalizeCandidateForCommit({ previous: turn.beforeState, candidate: applied.candidate,
+          proposedNextDecision: nextDecision, nextRngCounter: counter });
+        return { proposal, finalized, noCheck };
+      };
+
+      let rawProposal: unknown;
+      let rejected: InvalidDirectorProposalError | null = null;
+      try { rawProposal = await deps.director.propose(directorInput); }
+      catch (error) {
+        if (!(error instanceof InvalidDirectorProposalError)) throw error;
+        rawProposal = error.invalidProposal;
+        rejected = error;
+      }
+      let evaluated: ReturnType<typeof evaluate> | null = null;
+      if (rejected === null) {
+        try { evaluated = evaluate(rawProposal); }
+        catch (error) {
+          rejected = error instanceof InvalidDirectorProposalError
+            ? error : new InvalidDirectorProposalError(rawProposal, [safeIssue(error)]);
+        }
+      }
+
+      if (rejected !== null) {
+        turn = deps.turns.getTurn(turn.id);
+        resolved = parseResolutions(turn);
+        nextRngCounter = turn.nextRngCounter;
+        const issues = rejected.issues.slice(0, 20).map((issue) => ({
+          path: issue.path.startsWith("/") ? issue.path.slice(0, 500) : "/",
+          message: /^[A-Z][A-Z0-9_]{2,100}$/.test(issue.message) ? issue.message : "DIRECTOR_PROPOSAL_INVALID",
+        }));
+        const authoritative = { ...directorInput,
+          persistedPlan: turn.resolutionPlan === null ? null : ResolutionPlanSchema.parse(turn.resolutionPlan),
+          persistedResolutions: resolved };
+        try {
+          if (!deps.director.repair) throw new Error("DIRECTOR_REPAIR_UNAVAILABLE");
+          const repaired = await deps.director.repair({
+            turnId: turn.id, lockedPlanId: authoritative.persistedPlan?.id ?? null,
+            resolutions: resolved.map(({ id, tier }) => ({ id, tier })),
+            invalidProposal: safeRepairValue(rejected.invalidProposal), issues,
+          }, authoritative);
+          evaluated = evaluate(repaired);
+        } catch (error) {
+          const finalIssues = error instanceof InvalidDirectorProposalError
+            ? error.issues.slice(0, 20).map((issue) => ({ path: issue.path.startsWith("/") ? issue.path : "/",
+              message: /^[A-Z][A-Z0-9_]{2,100}$/.test(issue.message) ? issue.message : "DIRECTOR_PROPOSAL_INVALID" }))
+            : [safeIssue(error)];
+          deps.turns.markFailed(turn.id, { code: "DIRECTOR_REPAIR_FAILED",
+            message: "Director proposal failed validation after one repair.",
+            details: { stage: "CANDIDATE_VALIDATION", turnId: turn.id, modelProfile: turn.modelProfile,
+              issues: finalIssues.map(({ path, message }) => ({ path, message })) as JsonValue } });
+          throw new Error("DIRECTOR_REPAIR_FAILED");
+        }
+      }
+
+      if (evaluated === null) throw new Error("DIRECTOR_PROPOSAL_INVALID");
+      deps.failureInjector?.check("CANDIDATE_VALIDATION");
+      const { proposal, finalized } = evaluated;
+      if (evaluated.noCheck) {
         deps.turns.persistNoCheckResolution(turn.id, turn.beforeState.metadata.rngCounter);
         turn = deps.turns.getTurn(turn.id);
         resolved = parseResolutions(turn);
         nextRngCounter = turn.nextRngCounter;
       }
-      if (nextRngCounter === null) throw new Error("MISSING_RNG_COUNTER");
-      const nextDecision = deriveDecisionAuthority(turn.beforeState, proposal.nextDecision);
-      const applied = applyOperationsToClone(turn.beforeState, [...proposal.uncontestedOperations, ...proposal.checkLinkedOperations], { intents: turn.lockedIntents, resolutions: resolved });
-      deps.failureInjector?.check("CANDIDATE_VALIDATION");
-      const finalized = finalizeCandidateForCommit({ previous: turn.beforeState, candidate: applied.candidate, proposedNextDecision: nextDecision, nextRngCounter });
       deps.turns.persistProposal(turn.id, proposal, finalized.candidate);
       const afterView = projectPlayerView(finalized.candidate, "RAVEN");
       const narration = NarrationSchema.parse(await deps.narrator.narrate({ visibleState: afterView, resolutions: resolved.filter((roll) => roll.visibility === "PUBLIC"), proposal }));

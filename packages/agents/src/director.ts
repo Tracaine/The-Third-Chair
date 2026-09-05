@@ -1,10 +1,11 @@
 import { Agent, type Tool } from "@openai/agents";
 import { TurnProposalSchema, type ActorIntent, type CheckResolution, type SourcePackService, type TurnProposal } from "@third-chair/contracts";
-import type { DirectorInput, DirectorPort } from "@third-chair/engine";
+import { InvalidDirectorProposalError, type DirectorInput, type DirectorPort, type DirectorRepairInput } from "@third-chair/engine";
 import type { AgentConfig } from "./config.js";
 import { buildDirectorInput } from "./context/director-context.js";
 import { loadDirectorPrompt } from "./prompt-loader.js";
 import { AgentsSdkRunClient, type AgentRunClient, type SafeUsageCounters } from "./runner.js";
+import { serializeDirectorRepairInput } from "./repair.js";
 import { createDirectorTools, type DirectorRunContext } from "./tools/index.js";
 
 export interface DirectorMetrics {
@@ -131,6 +132,16 @@ function freezeIntents(intents: readonly ActorIntent[]): ActorIntent[] {
   return copy;
 }
 
+function pointer(path: readonly PropertyKey[]): string {
+  return `/${path.map((part) => String(part).replaceAll("~", "~0").replaceAll("/", "~1")).join("/")}`;
+}
+
+function safeIssue(error: unknown, path = "/"): { path: string; message: string } {
+  const message = error instanceof Error && /^[A-Z][A-Z0-9_]{2,100}$/.test(error.message)
+    ? error.message : "DIRECTOR_PROPOSAL_INVALID";
+  return { path, message };
+}
+
 export class OpenAiDirectorAdapter implements DirectorPort {
   readonly #options: DirectorAdapterOptions;
   readonly #client: AgentRunClient;
@@ -187,8 +198,49 @@ export class OpenAiDirectorAdapter implements DirectorPort {
         });
       } catch { /* Telemetry is not turn authority. */ }
       const parsed = TurnProposalSchema.safeParse(result.finalOutput);
-      if (!parsed.success) throw new Error("DIRECTOR_INVALID_OUTPUT");
-      validateBoundaries(input, parsed.data, persistedResolutions);
+      if (!parsed.success) throw new InvalidDirectorProposalError(result.finalOutput,
+        parsed.error.issues.slice(0, 20).map((issue) => ({ path: pointer(issue.path), message: "INVALID_VALUE" })));
+      try { validateBoundaries(input, parsed.data, persistedResolutions); }
+      catch (error) { throw new InvalidDirectorProposalError(parsed.data, [safeIssue(error)]); }
+      return parsed.data;
+    } finally { clearTimeout(timeout); }
+  }
+
+  async repair(repairInput: DirectorRepairInput, authoritative: DirectorInput): Promise<TurnProposal> {
+    requireLockedIntents(authoritative);
+    const serialized = serializeDirectorRepairInput(repairInput);
+    const config = this.#options.config;
+    const agent = createDirectorAgent(config, this.#tools);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), config.directorTimeoutMs);
+    let persistedResolutions = [...authoritative.persistedResolutions];
+    const context: DirectorRunContext = {
+      turnId: authoritative.turnId, campaignId: authoritative.state.metadata.campaignId,
+      sourcePack: this.#options.sourcePack, intentsLocked: true,
+      lockedIntents: freezeIntents(authoritative.intents), abortSignal: controller.signal,
+      lockAndResolveChecks: (plan) => {
+        controller.signal.throwIfAborted();
+        if (repairInput.lockedPlanId === null || plan.id !== repairInput.lockedPlanId) {
+          throw new Error("LOCKED_PLAN_MISMATCH");
+        }
+        const result = authoritative.runtime.lockAndResolveChecks(plan);
+        persistedResolutions = [...result.resolutions];
+        return result;
+      },
+    };
+    try {
+      let result;
+      try {
+        result = await this.#client.run(agent, serialized, {
+          context, maxTurns: 10, signal: controller.signal,
+          toolExecution: { maxFunctionToolConcurrency: 1 },
+        });
+      } catch { throw new Error(controller.signal.aborted ? "DIRECTOR_TIMEOUT" : "DIRECTOR_REPAIR_RUN_FAILED"); }
+      const parsed = TurnProposalSchema.safeParse(result.finalOutput);
+      if (!parsed.success) throw new InvalidDirectorProposalError(result.finalOutput,
+        parsed.error.issues.slice(0, 20).map((issue) => ({ path: pointer(issue.path), message: "INVALID_VALUE" })));
+      try { validateBoundaries(authoritative, parsed.data, persistedResolutions); }
+      catch (error) { throw new InvalidDirectorProposalError(parsed.data, [safeIssue(error)]); }
       return parsed.data;
     } finally { clearTimeout(timeout); }
   }

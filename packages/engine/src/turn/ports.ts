@@ -25,6 +25,22 @@ export interface DirectorInput {
   readonly persistedResolutions: readonly CheckResolution[];
   readonly runtime: DirectorRuntime;
 }
+export interface DirectorRepairIssue { readonly path: string; readonly message: string; }
+export interface DirectorRepairInput {
+  readonly turnId: string;
+  readonly lockedPlanId: string | null;
+  readonly resolutions: readonly { readonly id: string; readonly tier: CheckResolution["tier"] }[];
+  readonly invalidProposal: unknown;
+  readonly issues: readonly DirectorRepairIssue[];
+}
+export class InvalidDirectorProposalError extends Error {
+  constructor(readonly invalidProposal: unknown, readonly issues: readonly DirectorRepairIssue[]) {
+    super("DIRECTOR_INVALID_OUTPUT");
+  }
+}
 export interface NarratorInput { readonly visibleState: unknown; readonly resolutions: readonly CheckResolution[]; readonly proposal: TurnProposal; }
-export interface DirectorPort { propose(input: DirectorInput): Promise<TurnProposal> | TurnProposal; }
+export interface DirectorPort {
+  propose(input: DirectorInput): Promise<TurnProposal> | TurnProposal;
+  repair?(input: DirectorRepairInput, authoritative: DirectorInput): Promise<TurnProposal> | TurnProposal;
+}
 export interface NarratorPort { narrate(input: NarratorInput): Promise<Narration> | Narration; }
