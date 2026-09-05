@@ -36,12 +36,19 @@ export function createTurnEngine(deps: TurnEngineDeps): TurnEngine {
       let nextRngCounter = turn.nextRngCounter;
       const lockAndResolveChecks = (rawPlan: ResolutionPlan) => {
         const plan = ResolutionPlanSchema.parse(rawPlan);
+        turn = deps.turns.getTurn(turn.id);
         if (turn.resolutionPlan !== null) {
           const stored = ResolutionPlanSchema.parse(turn.resolutionPlan);
-          if (sha256Json(stored) !== sha256Json(plan)) throw new Error("RESOLUTION_PLAN_ALREADY_LOCKED");
-          if (turn.resolutions === null || turn.nextRngCounter === null) throw new Error("LOCKED_PLAN_UNRESOLVED");
-          resolved = parseResolutions(turn); nextRngCounter = turn.nextRngCounter;
-          return { resolutions: resolved, nextRngCounter };
+          if (sha256Json(stored) !== sha256Json(plan)) throw new Error("LOCKED_PLAN_MISMATCH");
+          if (turn.resolutions !== null && turn.nextRngCounter !== null) {
+            resolved = parseResolutions(turn); nextRngCounter = turn.nextRngCounter;
+            return { planId: stored.id, resolutions: resolved, nextRngCounter, reused: true };
+          }
+          const result = resolvePlan(campaign.rngSeed, campaign.id, turn.beforeState.metadata.rngCounter, stored);
+          deps.turns.persistResolutions(turn.id, result.resolutions, result.nextRngCounter);
+          deps.failureInjector?.check("RESOLVED");
+          turn = deps.turns.getTurn(turn.id); resolved = result.resolutions; nextRngCounter = result.nextRngCounter;
+          return { planId: stored.id, ...result, reused: false };
         }
         deps.turns.persistPlan(turn.id, plan);
         deps.failureInjector?.check("PLANNED");
@@ -49,13 +56,23 @@ export function createTurnEngine(deps: TurnEngineDeps): TurnEngine {
         deps.turns.persistResolutions(turn.id, result.resolutions, result.nextRngCounter);
         deps.failureInjector?.check("RESOLVED");
         turn = deps.turns.getTurn(turn.id); resolved = result.resolutions; nextRngCounter = result.nextRngCounter;
-        return result;
+        return { planId: plan.id, ...result, reused: false };
       };
       deps.failureInjector?.check("PROCESSING");
       const proposal = TurnProposalSchema.parse(await deps.director.propose({ turnId: turn.id, state: turn.beforeState, intents: turn.lockedIntents,
         persistedPlan: turn.resolutionPlan === null ? null : ResolutionPlanSchema.parse(turn.resolutionPlan),
         persistedResolutions: resolved, runtime: { lockAndResolveChecks } }));
-      if (nextRngCounter === null) throw new Error("DIRECTOR_DID_NOT_RESOLVE_CHECKS");
+      if (nextRngCounter === null) {
+        if (turn.resolutionPlan !== null || proposal.checkLinkedOperations.length > 0
+          || proposal.narrativeBrief.requiredResolutionIds.length > 0) {
+          throw new Error("DIRECTOR_DID_NOT_RESOLVE_CHECKS");
+        }
+        deps.turns.persistNoCheckResolution(turn.id, turn.beforeState.metadata.rngCounter);
+        turn = deps.turns.getTurn(turn.id);
+        resolved = parseResolutions(turn);
+        nextRngCounter = turn.nextRngCounter;
+      }
+      if (nextRngCounter === null) throw new Error("MISSING_RNG_COUNTER");
       const nextDecision = deriveDecisionAuthority(turn.beforeState, proposal.nextDecision);
       const applied = applyOperationsToClone(turn.beforeState, [...proposal.uncontestedOperations, ...proposal.checkLinkedOperations], { intents: turn.lockedIntents, resolutions: resolved });
       deps.failureInjector?.check("CANDIDATE_VALIDATION");

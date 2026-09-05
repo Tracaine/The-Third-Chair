@@ -21,6 +21,17 @@ Focused Task 4 verification passed: 68 Director tests, all six workspace typeche
 
 Resume with Task 5, **Make Stakes and Dice an Idempotent Director Tool**, from the current branch head. Do not begin CHAIR-004.
 
+## Lean private-runtime gate
+
+Bill and Raven revised the execution policy after Task 4. This is a private two-player runtime, not a hostile multi-tenant service. Finish the playable vertical slice before adding broader hardening.
+
+- Implement directly without a task-by-task subagent/reviewer carousel.
+- Keep narrow test-first coverage for player agency, immutable stakes/dice, no mutation on failure, visible-only narration, private-source boundaries, and restart recovery.
+- Do not add combinatorial adversarial matrices, fuzzing, or equivalent permutations unless an observed failure requires them.
+- Replace the original twelve-case live-model gate with four acceptance paths: safe no-roll action, meaningful locked check, narration failure after a roll, and process restart after persisted dice.
+- Run one whole-branch review and the full offline verification suite after the vertical slice works.
+- Record this as an explicit private-runtime scope amendment; do not claim the original production-hardening gate was executed unchanged.
+
 Task 5 must add `lock_and_resolve_checks`, preserve an immutable single logical plan, resume safely from PLANNED or RESOLVED, reuse stored results on identical retries, reject changed plans, and support no-roll turns without inventing a die. SQLite, deterministic resolution, validation, projection, and commit remain the only authorities.
 
 Then complete Tasks 6–8 in order:

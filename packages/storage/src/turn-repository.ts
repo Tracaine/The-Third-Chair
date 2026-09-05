@@ -254,6 +254,16 @@ class SqliteTurnRepository implements TurnRepository {
     if (Number(result.changes) !== 1) throw transitionError();
   }
 
+  persistNoCheckResolution(turnId: TurnId, rngCounter: number): void {
+    if (!Number.isSafeInteger(rngCounter) || rngCounter < 0) throw new Error("INVALID_RNG_COUNTER");
+    const payload = stringifyJson({ resolutions: [], nextRngCounter: rngCounter });
+    const result = this.db.prepare(`
+      UPDATE turns SET resolutions_json = ?, status = 'RESOLVED', updated_at = ?
+      WHERE id = ? AND status = 'PROCESSING' AND resolution_plan_json IS NULL
+    `).run(payload, new Date().toISOString(), turnId);
+    if (Number(result.changes) !== 1) throw transitionError();
+  }
+
   persistProposal(turnId: TurnId, proposal: import("@third-chair/contracts").TurnProposal, candidate: import("@third-chair/contracts").WorldState): void {
     const parsedCandidate = WorldStateSchema.parse(candidate);
     const result = this.db.prepare(`

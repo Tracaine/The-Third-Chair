@@ -5,7 +5,7 @@ import type { AgentConfig } from "./config.js";
 import { buildDirectorInput } from "./context/director-context.js";
 import { loadDirectorPrompt } from "./prompt-loader.js";
 import { AgentsSdkRunClient, type AgentRunClient, type SafeUsageCounters } from "./runner.js";
-import { createRetrievalTools, type DirectorRunContext } from "./tools/index.js";
+import { createDirectorTools, type DirectorRunContext } from "./tools/index.js";
 
 export interface DirectorMetrics {
   readonly role: "director";
@@ -139,7 +139,7 @@ export class OpenAiDirectorAdapter implements DirectorPort {
   constructor(options: DirectorAdapterOptions) {
     this.#options = options;
     this.#client = options.runClient ?? new AgentsSdkRunClient(options.config.traceMode);
-    this.#tools = [...(options.tools ?? createRetrievalTools())];
+    this.#tools = [...(options.tools ?? createDirectorTools())];
   }
 
   async propose(input: DirectorInput): Promise<TurnProposal> {
@@ -165,7 +165,7 @@ export class OpenAiDirectorAdapter implements DirectorPort {
         controller.signal.throwIfAborted();
         const result = input.runtime.lockAndResolveChecks(plan);
         persistedResolutions = [...result.resolutions];
-        return { ...result, planId: plan.id, reused: input.persistedPlan !== null };
+        return result;
       },
     };
     try {

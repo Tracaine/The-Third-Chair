@@ -9,7 +9,14 @@ export const NarrationSchema = z.object({
   visibleEventIds: z.array(z.string()),
 }).strict();
 export type Narration = z.infer<typeof NarrationSchema>;
-export interface DirectorRuntime { lockAndResolveChecks(plan: ResolutionPlan): { readonly resolutions: readonly CheckResolution[]; readonly nextRngCounter: number }; }
+export interface DirectorRuntime {
+  lockAndResolveChecks(plan: ResolutionPlan): {
+    readonly planId: ResolutionPlan["id"];
+    readonly resolutions: readonly CheckResolution[];
+    readonly nextRngCounter: number;
+    readonly reused: boolean;
+  };
+}
 export interface DirectorInput {
   readonly turnId: string;
   readonly state: WorldState;

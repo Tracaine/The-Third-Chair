@@ -10,7 +10,7 @@ export function directorInput() {
     turnId: "test_turn", persistedPlan: null, persistedResolutions: [],
     state: WorldStateSchema.parse(minimumWorldStateInput),
     intents: [structuredClone(billIntent), structuredClone(ravenIntent)],
-    runtime: { lockAndResolveChecks: () => ({ resolutions: [], nextRngCounter: 0 }) },
+    runtime: { lockAndResolveChecks: (plan: { id: string }) => ({ planId: plan.id, resolutions: [], nextRngCounter: 0, reused: false }) },
   };
 }
 export function proposal(): TurnProposal {

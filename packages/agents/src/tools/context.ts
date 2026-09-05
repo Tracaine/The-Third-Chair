@@ -20,7 +20,7 @@ export interface DirectorRunContext {
   lockAndResolveChecks(plan: ResolutionPlan): LockAndResolveResult | Promise<LockAndResolveResult>;
 }
 
-interface LockAndResolveResult {
+export interface LockAndResolveResult {
   planId: ResolutionPlan["id"];
   resolutions: readonly CheckResolution[];
   nextRngCounter: number;

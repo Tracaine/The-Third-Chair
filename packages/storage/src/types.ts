@@ -122,6 +122,7 @@ export interface TurnRepository {
   beginTurn(input: BeginTurnInput): BeginTurnResult;
   persistPlan(turnId: TurnId, plan: ResolutionPlan): void;
   persistResolutions(turnId: TurnId, resolutions: readonly CheckResolution[], rngCounter: number): void;
+  persistNoCheckResolution(turnId: TurnId, rngCounter: number): void;
   persistProposal(turnId: TurnId, proposal: TurnProposal, candidate: WorldState): void;
   commitTurn(input: CommitTurnInput): CommittedTurn;
   markAwaitingInput(turnId: TurnId, decision: DecisionRequest): void;
