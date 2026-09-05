@@ -11,11 +11,14 @@ import type { DatabaseSync } from "node:sqlite";
 import type {
   BeginTurnInput,
   BeginTurnResult,
+  BeginRecoveryInput,
+  BeginRecoveryResult,
   CampaignId,
   ClientRequestId,
   CommitTurnInput,
   CommittedTurn,
   JsonValue,
+  RecoveryCommandRecord,
   TurnFailure,
   TurnId,
   TurnRecord,
@@ -54,6 +57,21 @@ interface CommitCampaignRow {
   current_state_json: string;
   current_state_hash: string;
   current_decision_json: string;
+}
+
+interface RecoveryRow {
+  id: string; campaign_id: string; turn_id: string; client_request_id: string;
+  decision_id: string; expected_state_version: number; input_hash: string;
+  status: RecoveryCommandRecord["status"]; result_json: string | null;
+  created_at: string; updated_at: string;
+}
+
+function parseRecovery(row: RecoveryRow): RecoveryCommandRecord {
+  return { id: row.id, campaignId: row.campaign_id, turnId: row.turn_id,
+    clientRequestId: row.client_request_id, decisionId: row.decision_id,
+    expectedStateVersion: row.expected_state_version, inputHash: row.input_hash,
+    status: row.status, result: row.result_json === null ? null : parseJson(row.result_json),
+    createdAt: row.created_at, updatedAt: row.updated_at };
 }
 
 function stringifyJson(value: JsonValue): string {
@@ -230,6 +248,56 @@ class SqliteTurnRepository implements TurnRepository {
       if (this.db.isTransaction) this.db.exec("ROLLBACK");
       throw error;
     }
+  }
+
+  beginRecovery(input: BeginRecoveryInput): BeginRecoveryResult {
+    const existing = this.db.prepare(`SELECT * FROM turn_recovery_commands
+      WHERE campaign_id = ? AND client_request_id = ?`).get(input.campaignId, input.clientRequestId) as RecoveryRow | undefined;
+    if (existing) {
+      if (existing.input_hash !== input.inputHash) throw new Error("IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_INPUT");
+      return { kind: "EXISTING", command: parseRecovery(existing) };
+    }
+    const turn = this.getTurn(input.turnId);
+    if (turn.campaignId !== input.campaignId) throw new Error("RECOVERY_CAMPAIGN_MISMATCH");
+    if (turn.status !== "AWAITING_INPUT" || turn.nextDecision === null) throw new Error("RECOVERY_NOT_AVAILABLE");
+    if (turn.expectedStateVersion !== input.expectedStateVersion) throw new Error("STATE_VERSION_CONFLICT");
+    if (turn.nextDecision.id !== input.decisionId || turn.nextDecision.owner !== "BILL") throw new Error("DECISION_CONFLICT");
+    const reservation = this.db.prepare(`SELECT turn_id, reserved_state_version FROM active_turns
+      WHERE campaign_id = ?`).get(input.campaignId) as { turn_id: string; reserved_state_version: number } | undefined;
+    if (reservation?.turn_id !== turn.id || reservation.reserved_state_version !== input.expectedStateVersion) {
+      throw new Error("ACTIVE_RESERVATION_MISMATCH");
+    }
+    const now = new Date().toISOString();
+    try {
+      this.db.prepare(`INSERT INTO turn_recovery_commands(
+        id, campaign_id, turn_id, client_request_id, decision_id, expected_state_version,
+        input_hash, status, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'PROCESSING', ?, ?)`).run(
+        input.id, input.campaignId, input.turnId, input.clientRequestId, input.decisionId,
+        input.expectedStateVersion, input.inputHash, now, now);
+    } catch (error) {
+      if (error instanceof Error && /UNIQUE/.test(error.message)) throw new Error("RECOVERY_ALREADY_SUBMITTED");
+      throw error;
+    }
+    return { kind: "STARTED", command: this.getRecovery(input.id) };
+  }
+
+  completeRecovery(id: string, status: "COMMITTED" | "FAILED", result: JsonValue): RecoveryCommandRecord {
+    const payload = stringifyJson(result);
+    const updated = this.db.prepare(`UPDATE turn_recovery_commands SET status = ?, result_json = ?, updated_at = ?
+      WHERE id = ? AND status = 'PROCESSING'`).run(status, payload, new Date().toISOString(), id);
+    if (Number(updated.changes) !== 1) {
+      const existing = this.getRecovery(id);
+      if (existing.status !== status || JSON.stringify(existing.result) !== payload) throw transitionError();
+      return existing;
+    }
+    return this.getRecovery(id);
+  }
+
+  getRecovery(id: string): RecoveryCommandRecord {
+    const row = this.db.prepare("SELECT * FROM turn_recovery_commands WHERE id = ?").get(id) as RecoveryRow | undefined;
+    if (!row) throw new Error("RECOVERY_COMMAND_NOT_FOUND");
+    return parseRecovery(row);
   }
 
   persistPlan(turnId: TurnId, plan: import("@third-chair/contracts").ResolutionPlan): void {

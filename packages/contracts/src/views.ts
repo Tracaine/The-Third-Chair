@@ -71,7 +71,11 @@ export const PlayerViewSchema = z.object({
     id: PersistedIdSchema, round: z.number().int().positive(), currentActorId: PersistedIdSchema.nullable(), initiativeOrder: z.array(PersistedIdSchema), facts: z.array(VisibleFactSchema),
   }).strict().nullable(),
   currentDecision: PlayerDecisionViewSchema,
-  recoveryStatus: z.literal("NONE"),
+  recoveryStatus: z.union([
+    z.literal("NONE"),
+    z.object({ kind: z.literal("NARRATION_RECOVERY"), turnId: PersistedIdSchema,
+      decisionId: PersistedIdSchema }).strict(),
+  ]),
 }).strict();
 
 export type PlayerDecisionView = z.infer<typeof PlayerDecisionViewSchema>;

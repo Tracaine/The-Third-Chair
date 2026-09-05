@@ -100,6 +100,23 @@ export type BeginTurnResult =
   | { readonly kind: "EXISTING"; readonly turn: TurnRecord }
   | { readonly kind: "ACTIVE_SUCCESSOR"; readonly turn: TurnRecord };
 
+export interface BeginRecoveryInput {
+  readonly id: string;
+  readonly campaignId: CampaignId;
+  readonly turnId: TurnId;
+  readonly clientRequestId: ClientRequestId;
+  readonly decisionId: string;
+  readonly expectedStateVersion: number;
+  readonly inputHash: string;
+}
+export interface RecoveryCommandRecord extends BeginRecoveryInput {
+  readonly status: "PROCESSING" | "COMMITTED" | "FAILED";
+  readonly result: JsonValue | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+export type BeginRecoveryResult = { readonly kind: "STARTED" | "EXISTING"; readonly command: RecoveryCommandRecord };
+
 export interface CommitTurnInput {
   readonly turnId: TurnId;
   readonly candidateStateHash: string;
@@ -120,6 +137,9 @@ export interface CampaignRepository {
 
 export interface TurnRepository {
   beginTurn(input: BeginTurnInput): BeginTurnResult;
+  beginRecovery(input: BeginRecoveryInput): BeginRecoveryResult;
+  completeRecovery(id: string, status: "COMMITTED" | "FAILED", result: JsonValue): RecoveryCommandRecord;
+  getRecovery(id: string): RecoveryCommandRecord;
   persistPlan(turnId: TurnId, plan: ResolutionPlan): void;
   persistResolutions(turnId: TurnId, resolutions: readonly CheckResolution[], rngCounter: number): void;
   persistNoCheckResolution(turnId: TurnId, rngCounter: number): void;

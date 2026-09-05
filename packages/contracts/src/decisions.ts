@@ -35,9 +35,22 @@ export const IntentAdvanceGameCommandSchema = z.object({
   intents: z.array(ActorIntentSchema),
 }).strict();
 
-// CHAIR-003 extends this stable name with the explicit recovery command.
-export const AdvanceGameCommandSchema = IntentAdvanceGameCommandSchema;
+export const NarrationRecoveryCommandSchema = z.object({
+  kind: z.literal("NARRATION_RECOVERY"),
+  campaignId: PersistedIdSchema,
+  expectedStateVersion: z.number().int().nonnegative(),
+  decisionId: PersistedIdSchema,
+  clientRequestId: PersistedIdSchema,
+  turnId: PersistedIdSchema,
+  acceptTerseRendering: z.boolean(),
+}).strict();
+
+export const AdvanceGameCommandSchema = z.discriminatedUnion("kind", [
+  IntentAdvanceGameCommandSchema,
+  NarrationRecoveryCommandSchema,
+]);
 
 export type DecisionRequest = z.infer<typeof DecisionRequestSchema>;
 export type IntentAdvanceGameCommand = z.infer<typeof IntentAdvanceGameCommandSchema>;
+export type NarrationRecoveryCommand = z.infer<typeof NarrationRecoveryCommandSchema>;
 export type AdvanceGameCommand = z.infer<typeof AdvanceGameCommandSchema>;

@@ -32,8 +32,10 @@ describe("world state", () => {
     }).kind).toBe("INTENTS");
   });
 
-  it("exports the public command schema as the ordinary command alias", () => {
-    expect(AdvanceGameCommandSchema).toBe(IntentAdvanceGameCommandSchema);
+  it("exports ordinary and explicit narration-recovery commands", () => {
+    expect(AdvanceGameCommandSchema.parse({ kind: "NARRATION_RECOVERY", campaignId,
+      expectedStateVersion: 0, decisionId, clientRequestId, turnId: "test_turn",
+      acceptTerseRendering: true }).kind).toBe("NARRATION_RECOVERY");
   });
 
   it("defaults omitted intent ID arrays", () => {

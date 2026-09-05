@@ -14,6 +14,10 @@ Begin `sceneText` with one exact check line for each required visible resolution
 
 Place all required check lines before consequence prose. Copy every number exactly.
 
+For each visible resource change, include its exact supplied line before consequence prose:
+
+`Resource <resource id>: <signed amount>, now <current>.`
+
 # Seat law
 
 Do not write Bill or Raven speech, action, thoughts, feelings, consent, reactions, or tactical choices beyond their supplied locked intent. Put NPC speech only in `spokenNpcLines`. Do not quote a player line unless it appears verbatim in that player's locked intent.
