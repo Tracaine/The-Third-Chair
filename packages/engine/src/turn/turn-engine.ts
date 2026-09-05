@@ -156,8 +156,16 @@ export function createTurnEngine(deps: TurnEngineDeps): TurnEngine {
         nextRngCounter = turn.nextRngCounter;
       }
       deps.turns.persistProposal(turn.id, proposal, finalized.candidate);
+      const beforeView = projectPlayerView(turn.beforeState, "RAVEN");
       const afterView = projectPlayerView(finalized.candidate, "RAVEN");
-      const narration = NarrationSchema.parse(await deps.narrator.narrate({ visibleState: afterView, resolutions: resolved.filter((roll) => roll.visibility === "PUBLIC"), proposal }));
+      const visibleEvents = afterView.events.filter(({ id }) => !beforeView.events.some((event) => event.id === id));
+      const narration = NarrationSchema.parse(await deps.narrator.narrate({
+        beforeVisibleState: beforeView, visibleState: afterView, lockedIntents: turn.lockedIntents,
+        persistedPlan: turn.resolutionPlan === null ? null : ResolutionPlanSchema.parse(turn.resolutionPlan),
+        resolutions: resolved.filter((roll) => roll.visibility === "PUBLIC"),
+        visibleOperations: [...proposal.uncontestedOperations, ...proposal.checkLinkedOperations],
+        visibleEvents, proposal,
+      }));
       const expectedResolutions = proposal.narrativeBrief.requiredResolutionIds;
       if (expectedResolutions.some((id) => !narration.mustIncludeResolutionIds.includes(id))) throw new Error("NARRATION_MISSING_RESOLUTION");
       deps.failureInjector?.check("NARRATION");

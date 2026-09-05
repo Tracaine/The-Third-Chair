@@ -8,3 +8,5 @@ export * from "./context/serialize.js";
 export * from "./tools/index.js";
 export * from "./director.js";
 export * from "./repair.js";
+export * from "./narration-validator.js";
+export * from "./narrator.js";

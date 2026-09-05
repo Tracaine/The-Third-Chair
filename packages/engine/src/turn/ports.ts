@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ActorIntent, CheckResolution, ResolutionPlan, TurnProposal, WorldState } from "@third-chair/contracts";
+import type { ActorIntent, CheckResolution, PlayerView, ResolutionPlan, TurnProposal, WorldOperation, WorldState } from "@third-chair/contracts";
 
 export const NarrationSchema = z.object({
   sceneText: z.string().trim().min(1).max(8_000),
@@ -38,7 +38,16 @@ export class InvalidDirectorProposalError extends Error {
     super("DIRECTOR_INVALID_OUTPUT");
   }
 }
-export interface NarratorInput { readonly visibleState: unknown; readonly resolutions: readonly CheckResolution[]; readonly proposal: TurnProposal; }
+export interface NarratorInput {
+  readonly beforeVisibleState: PlayerView;
+  readonly visibleState: PlayerView;
+  readonly lockedIntents: readonly ActorIntent[];
+  readonly persistedPlan: ResolutionPlan | null;
+  readonly resolutions: readonly CheckResolution[];
+  readonly visibleOperations: readonly WorldOperation[];
+  readonly visibleEvents: readonly { readonly id: string }[];
+  readonly proposal: TurnProposal;
+}
 export interface DirectorPort {
   propose(input: DirectorInput): Promise<TurnProposal> | TurnProposal;
   repair?(input: DirectorRepairInput, authoritative: DirectorInput): Promise<TurnProposal> | TurnProposal;

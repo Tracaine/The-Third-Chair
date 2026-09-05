@@ -8,3 +8,11 @@ export function loadDirectorPrompt(): string {
     throw new Error("DIRECTOR_PROMPT_UNAVAILABLE");
   }
 }
+
+export function loadNarratorPrompt(): string {
+  try {
+    return readFileSync(new URL("../prompts/narrator.md", import.meta.url), "utf8");
+  } catch {
+    throw new Error("NARRATOR_PROMPT_UNAVAILABLE");
+  }
+}
