@@ -34,8 +34,8 @@ export interface DirectorRepairInput {
   readonly issues: readonly DirectorRepairIssue[];
 }
 export class InvalidDirectorProposalError extends Error {
-  constructor(readonly invalidProposal: unknown, readonly issues: readonly DirectorRepairIssue[]) {
-    super("DIRECTOR_INVALID_OUTPUT");
+  constructor(readonly invalidProposal: unknown, readonly issues: readonly DirectorRepairIssue[], code = "DIRECTOR_INVALID_OUTPUT") {
+    super(code);
   }
 }
 export interface NarratorInput {

@@ -6,20 +6,23 @@ Branch: `chair-003-live-runtime`
 
 This is an in-progress recovery checkpoint, not the CHAIR-003 gate. Do not tag it as complete.
 
-## Completed and independently reviewed
+## Completed
 
 - Task 1 — bounded Agents SDK runtime configuration and safe runner seam.
 - Task 2 — bounded Director/Narrator contexts, deterministic pruning, exact persisted-plan/result preservation, and spoiler-safe projection.
 - Task 3 — four strict private Director retrieval tools with no MCP exposure.
 - Task 4 — structured Director prompt/adapter with deterministic seat, resolution, NPC-cause, resource, equipment, and inventory-collision authority checks.
+- Task 5 — strict `lock_and_resolve_checks`, immutable stakes, deterministic dice reuse, PLANNED/RESOLVED restart, and true no-roll turns.
+- Task 6 — one-shot proposal repair with sanitized diagnostics and no second roll path.
+- Task 7 — separate tool-less Narrator, visible-only bounded input, deterministic narration checks, identical-candidate retry, and Bill-owned terse-recovery flow.
 
 Task 4's final verified local commit is `bc2e9d452457468c252ebfa361a4b8d7479e5302`. Its exact code tree is `28719e7a3d37d14b0aeba7e66062281780ade73f`; the connector-created GitHub snapshot commit pointing to that tree is `374b817af966b1a84d36a1c8afdaa73a5d469309`.
 
 Focused Task 4 verification passed: 68 Director tests, all six workspace typechecks, 3 compatibility tests, and `git diff --check`. The final scoped re-review was clean.
 
-## Resume point
+## Current gate point
 
-Resume with Task 5, **Make Stakes and Dice an Idempotent Director Tool**, from the current branch head. Do not begin CHAIR-004.
+Task 8's server wiring, four-case evaluator, and offline gate are complete. The final real-model run is pending because this workspace intentionally has no `OPENAI_API_KEY`. Do not tag CHAIR-003 complete until `npm run eval` passes on Bill's locally configured machine and the redacted results are recorded.
 
 ## Lean private-runtime gate
 
@@ -32,13 +35,7 @@ Bill and Raven revised the execution policy after Task 4. This is a private two-
 - Run one whole-branch review and the full offline verification suite after the vertical slice works.
 - Record this as an explicit private-runtime scope amendment; do not claim the original production-hardening gate was executed unchanged.
 
-Task 5 must add `lock_and_resolve_checks`, preserve an immutable single logical plan, resume safely from PLANNED or RESOLVED, reuse stored results on identical retries, reject changed plans, and support no-roll turns without inventing a die. SQLite, deterministic resolution, validation, projection, and commit remain the only authorities.
-
-Then complete Tasks 6–8 in order:
-
-1. One-shot Director repair and candidate validation, with no rerolls.
-2. Tool-less Narrator, spoiler guard, identical-input narration retry, and explicit deterministic recovery.
-3. Offline full gates, real-model evals, live server/restart verification, redacted gate evidence, final annotated tag, push, and private package.
+SQLite, deterministic resolution, validation, projection, and commit remain the only authorities. The final annotated tag and private package follow the successful real-model gate.
 
 ## Boundaries still in force
 

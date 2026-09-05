@@ -7,6 +7,11 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
+    "@third-chair/agents": "*",
+    "@third-chair/contracts": "*",
+    "@third-chair/engine": "*",
+    "@third-chair/source-pack": "*",
+    "@third-chair/storage": "*",
     "express": "^5.2.1"
   },
   "scripts": {

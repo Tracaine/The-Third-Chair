@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { EntityResult, SourcePackManifestView, SourcePackService, SourceResult, TimelineResult } from "@third-chair/contracts";
 import type { AliasConfig } from "../indexing/entities.js";
+import aliases from "../../config/aliases.v1.json" with { type: "json" };
 import { delimitSourceData, safeFtsQuery } from "./query.js";
 
 interface ChunkRow {
@@ -84,4 +85,8 @@ export class SqliteSourcePackService implements SourcePackService {
     const result = Object.fromEntries(rows.map((row) => [row.key, JSON.parse(row.value_json)])) as SourcePackManifestView;
     return result;
   }
+}
+
+export function createSqliteSourcePackService(db: DatabaseSync): SqliteSourcePackService {
+  return new SqliteSourcePackService(db, aliases);
 }

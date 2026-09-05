@@ -1,0 +1,13 @@
+# CHAIR-003 Real-Model Evaluation
+
+The live gate runs four authority-focused paths against temporary campaign databases and the verified private source pack. It records only case name, pass/fail, elapsed time, final turn kind, roll count, and a normalized error code. Prompts, source passages, hidden state, narration, API credentials, and raw model output are never written to the result file.
+
+Run from the repository root with locally configured `OPENAI_API_KEY`:
+
+```powershell
+npm run eval
+```
+
+Optional environment settings are `DIRECTOR_MODEL`, `NARRATOR_MODEL`, their reasoning settings, and `THIRD_CHAIR_SOURCE_PACK_DATABASE`. Normal play and evaluation keep SDK tracing disabled unless the explicit private-development trace controls are enabled together.
+
+The four paths are a safe no-roll action, a meaningful locked check, forced narration failure after persisted dice, and process restart after persisted dice. Grading uses structured status, stored rolls, and RNG counters rather than prose style.

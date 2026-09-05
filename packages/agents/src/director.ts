@@ -201,7 +201,7 @@ export class OpenAiDirectorAdapter implements DirectorPort {
       if (!parsed.success) throw new InvalidDirectorProposalError(result.finalOutput,
         parsed.error.issues.slice(0, 20).map((issue) => ({ path: pointer(issue.path), message: "INVALID_VALUE" })));
       try { validateBoundaries(input, parsed.data, persistedResolutions); }
-      catch (error) { throw new InvalidDirectorProposalError(parsed.data, [safeIssue(error)]); }
+      catch (error) { const issue = safeIssue(error); throw new InvalidDirectorProposalError(parsed.data, [issue], issue.message); }
       return parsed.data;
     } finally { clearTimeout(timeout); }
   }
@@ -240,7 +240,7 @@ export class OpenAiDirectorAdapter implements DirectorPort {
       if (!parsed.success) throw new InvalidDirectorProposalError(result.finalOutput,
         parsed.error.issues.slice(0, 20).map((issue) => ({ path: pointer(issue.path), message: "INVALID_VALUE" })));
       try { validateBoundaries(authoritative, parsed.data, persistedResolutions); }
-      catch (error) { throw new InvalidDirectorProposalError(parsed.data, [safeIssue(error)]); }
+      catch (error) { const issue = safeIssue(error); throw new InvalidDirectorProposalError(parsed.data, [issue], issue.message); }
       return parsed.data;
     } finally { clearTimeout(timeout); }
   }

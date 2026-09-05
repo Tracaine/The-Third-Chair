@@ -5,6 +5,7 @@ export default defineConfig({
     include: [
       "packages/**/test/**/*.test.ts",
       "apps/**/test/**/*.test.ts",
+      "evals/**/*.test.ts",
     ],
     exclude: [
       "**/node_modules/**",

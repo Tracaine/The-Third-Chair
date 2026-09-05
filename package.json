@@ -7,14 +7,14 @@
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p tsconfig.evals.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "source-pack": "npm run source-pack --workspace @third-chair/source-pack --",
     "dev:server": "npm run dev --workspace @third-chair/server",
     "dev:widget": "npm run dev --workspace @third-chair/widget",
-    "eval": "tsx evals/run.ts",
+    "eval": "node --import tsx evals/run.ts",
     "verify:private": "node scripts/verify-private-boundary.mjs"
   },
   "devDependencies": {
