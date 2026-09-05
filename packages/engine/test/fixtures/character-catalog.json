@@ -1,0 +1,133 @@
+{
+  "skills": {
+    "arcana": { "key": "arcana", "displayName": "Arcana", "ability": "intelligence", "sourceReferenceId": "synthetic:skill:arcana" },
+    "athletics": { "key": "athletics", "displayName": "Athletics", "ability": "strength", "sourceReferenceId": "synthetic:skill:athletics" },
+    "history": { "key": "history", "displayName": "History", "ability": "intelligence", "sourceReferenceId": "synthetic:skill:history" },
+    "investigation": { "key": "investigation", "displayName": "Investigation", "ability": "intelligence", "sourceReferenceId": "synthetic:skill:investigation" },
+    "perception": { "key": "perception", "displayName": "Perception", "ability": "wisdom", "sourceReferenceId": "synthetic:skill:perception" },
+    "persuasion": { "key": "persuasion", "displayName": "Persuasion", "ability": "charisma", "sourceReferenceId": "synthetic:skill:persuasion" }
+  },
+  "ancestries": {
+    "steadfast": {
+      "key": "steadfast",
+      "displayName": "Steadfast Folk",
+      "abilityBonuses": { "strength": 1, "constitution": 1 },
+      "speed": 30,
+      "sourceReferenceId": "synthetic:ancestry:steadfast",
+      "featureSourceReferenceIds": ["synthetic:feature:steadfast-grit"]
+    },
+    "starling": {
+      "key": "starling",
+      "displayName": "Starling Folk",
+      "abilityBonuses": { "dexterity": 2 },
+      "speed": 30,
+      "sourceReferenceId": "synthetic:ancestry:starling",
+      "featureSourceReferenceIds": ["synthetic:feature:starling-senses"]
+    }
+  },
+  "classes": {
+    "guardian": {
+      "key": "guardian",
+      "displayName": "Guardian",
+      "hitDie": 10,
+      "savingThrowAbilities": ["strength", "constitution"],
+      "skillChoice": { "count": 2, "options": ["athletics", "perception", "persuasion"] },
+      "fixedEquipmentIds": [],
+      "equipmentChoiceGroups": [
+        {
+          "key": "guardian-armor",
+          "count": 1,
+          "choices": [
+            { "key": "guardian-chain", "equipmentIds": ["test_item_chain"] },
+            { "key": "guardian-leather", "equipmentIds": ["test_item_leather"] }
+          ]
+        },
+        {
+          "key": "guardian-weapon",
+          "count": 1,
+          "choices": [
+            { "key": "guardian-sword", "equipmentIds": ["test_item_sword"] },
+            { "key": "guardian-bow", "equipmentIds": ["test_item_bow"] }
+          ]
+        }
+      ],
+      "unarmoredArmorClass": { "base": 10, "ability": "dexterity" },
+      "resources": [
+        { "id": "test_resource_resolve", "name": "Resolve", "maximum": 1, "sourceReferenceId": "synthetic:resource:resolve" }
+      ],
+      "spellcasting": null,
+      "sourceReferenceId": "synthetic:class:guardian",
+      "featureSourceReferenceIds": ["synthetic:feature:guardian-training"]
+    },
+    "arcanist": {
+      "key": "arcanist",
+      "displayName": "Arcanist",
+      "hitDie": 6,
+      "savingThrowAbilities": ["intelligence", "wisdom"],
+      "skillChoice": { "count": 2, "options": ["arcana", "history", "investigation"] },
+      "fixedEquipmentIds": ["test_item_spellbook"],
+      "equipmentChoiceGroups": [
+        {
+          "key": "arcanist-focus",
+          "count": 1,
+          "choices": [
+            { "key": "arcanist-crystal", "equipmentIds": ["test_item_crystal"] },
+            { "key": "arcanist-wand", "equipmentIds": ["test_item_wand"] }
+          ]
+        },
+        {
+          "key": "arcanist-pack",
+          "count": 1,
+          "choices": [
+            { "key": "arcanist-wanderer-pack", "equipmentIds": ["test_item_wanderer_pack"] }
+          ]
+        }
+      ],
+      "unarmoredArmorClass": { "base": 10, "ability": "dexterity" },
+      "resources": [],
+      "spellcasting": {
+        "selectionMode": "KNOWN",
+        "choiceCount": 3,
+        "availableSpellKeys": ["ember", "ward", "whisper"],
+        "slots": { "1": 2 }
+      },
+      "sourceReferenceId": "synthetic:class:arcanist",
+      "featureSourceReferenceIds": ["synthetic:feature:arcanist-casting"]
+    }
+  },
+  "backgrounds": {
+    "envoy": {
+      "key": "envoy",
+      "displayName": "Envoy",
+      "skillProficiencies": ["persuasion"],
+      "equipmentIds": ["test_item_seal"],
+      "sourceReferenceId": "synthetic:background:envoy",
+      "featureSourceReferenceIds": ["synthetic:feature:envoy-standing"]
+    },
+    "scholar": {
+      "key": "scholar",
+      "displayName": "Scholar",
+      "skillProficiencies": ["history"],
+      "equipmentIds": ["test_item_notes"],
+      "sourceReferenceId": "synthetic:background:scholar",
+      "featureSourceReferenceIds": ["synthetic:feature:scholar-research"]
+    }
+  },
+  "equipment": {
+    "test_item_chain": { "id": "test_item_chain", "displayName": "Chain coat", "armorClass": { "base": 16, "ability": null }, "sourceReferenceId": "synthetic:equipment:chain" },
+    "test_item_leather": { "id": "test_item_leather", "displayName": "Leather coat", "armorClass": { "base": 11, "ability": "dexterity" }, "sourceReferenceId": "synthetic:equipment:leather" },
+    "test_item_sword": { "id": "test_item_sword", "displayName": "Sword", "sourceReferenceId": "synthetic:equipment:sword" },
+    "test_item_bow": { "id": "test_item_bow", "displayName": "Bow", "sourceReferenceId": "synthetic:equipment:bow" },
+    "test_item_spellbook": { "id": "test_item_spellbook", "displayName": "Spellbook", "sourceReferenceId": "synthetic:equipment:spellbook" },
+    "test_item_crystal": { "id": "test_item_crystal", "displayName": "Crystal focus", "sourceReferenceId": "synthetic:equipment:crystal" },
+    "test_item_wand": { "id": "test_item_wand", "displayName": "Wand focus", "sourceReferenceId": "synthetic:equipment:wand" },
+    "test_item_wanderer_pack": { "id": "test_item_wanderer_pack", "displayName": "Wanderer pack", "sourceReferenceId": "synthetic:equipment:wanderer-pack" },
+    "test_item_seal": { "id": "test_item_seal", "displayName": "Envoy seal", "sourceReferenceId": "synthetic:equipment:seal" },
+    "test_item_notes": { "id": "test_item_notes", "displayName": "Research notes", "sourceReferenceId": "synthetic:equipment:notes" }
+  },
+  "spells": {
+    "ember": { "key": "ember", "id": "test_spell_ember", "displayName": "Ember", "level": 1, "sourceReferenceId": "synthetic:spell:ember" },
+    "ward": { "key": "ward", "id": "test_spell_ward", "displayName": "Ward", "level": 1, "sourceReferenceId": "synthetic:spell:ward" },
+    "whisper": { "key": "whisper", "id": "test_spell_whisper", "displayName": "Whisper", "level": 1, "sourceReferenceId": "synthetic:spell:whisper" }
+  }
+}

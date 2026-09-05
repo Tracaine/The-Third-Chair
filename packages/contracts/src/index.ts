@@ -9,3 +9,4 @@ export * from "./resolutions.js";
 export * from "./operations.js";
 export * from "./proposals.js";
 export * from "./sources.js";
+export * from "./characters.js";
