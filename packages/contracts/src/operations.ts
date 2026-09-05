@@ -25,7 +25,7 @@ export const WorldOperationSchema = z.discriminatedUnion("kind", [
   WithCause.extend({ kind: z.literal("SET_COMBAT"), combat: z.unknown().nullable() }).strict(),
   WithCause.extend({ kind: z.literal("ADVANCE_INITIATIVE") }).strict(),
   WithCause.extend({ kind: z.literal("ADD_FACT"), fact: z.object({ id: PersistedIdSchema, audience: AudienceSchema, kind: Text, text: Text }).strict() }).strict(),
-  WithCause.extend({ kind: z.literal("ADD_EVENT"), event: z.object({ id: PersistedIdSchema, audience: AudienceSchema, kind: Text, text: Text }).strict(), intentActorId: PersistedIdSchema.optional() }).strict(),
+  WithCause.extend({ kind: z.literal("ADD_EVENT"), event: z.object({ id: PersistedIdSchema, audience: AudienceSchema, kind: Text, text: Text }).strict(), intentActorId: PersistedIdSchema.nullish() }).strict(),
   WithCause.extend({ kind: z.literal("ADVANCE_CLOCK"), clockId: PersistedIdSchema, amount: z.number().int().positive().max(1000) }).strict(),
   WithCause.extend({ kind: z.literal("SET_NPC_ATTITUDE"), npcId: PersistedIdSchema, status: Text }).strict(),
   WithCause.extend({ kind: z.literal("SET_QUEST_STATUS"), questId: PersistedIdSchema, status: Text }).strict(),

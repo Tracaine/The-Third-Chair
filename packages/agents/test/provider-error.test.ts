@@ -11,6 +11,8 @@ describe("provider error classification", () => {
     [{ status: 404, code: "model_not_found" }, "DIRECTOR_MODEL_UNAVAILABLE"],
     [{ name: "APIConnectionError" }, "DIRECTOR_TRANSPORT_FAILED"],
     [{ status: 503 }, "DIRECTOR_PROVIDER_UNAVAILABLE"],
+    [{ name: "UserError" }, "DIRECTOR_SDK_CONFIGURATION_FAILED"],
+    [{ name: "ModelBehaviorError" }, "DIRECTOR_MODEL_BEHAVIOR_FAILED"],
   ])("maps safe provider metadata without preserving messages", (failure, expected) => {
     expect(agents.classifyProviderError({ ...failure, message: "secret provider details" }, "DIRECTOR")).toBe(expected);
   });

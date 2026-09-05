@@ -87,7 +87,7 @@ export function validateOperation(
 
   if (op.kind === "ADD_EVENT") {
     const intent =
-      op.intentActorId === undefined
+      op.intentActorId == null
         ? undefined
         : context.intents.find(
             (candidate) => candidate.actorId === op.intentActorId,

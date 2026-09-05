@@ -75,18 +75,18 @@ function validateBoundaries(input: DirectorInput, proposal: TurnProposal, resolu
     if (cause.type === "UNCONTESTED") {
       if (!intentFor(cause.intentActorId) && !directorOwns(cause.intentActorId)) failAgency();
       if ("actorId" in operation && operation.actorId !== cause.intentActorId) failAgency();
-      if (operation.kind === "ADD_EVENT" && operation.intentActorId !== undefined
+      if (operation.kind === "ADD_EVENT" && operation.intentActorId != null
         && operation.intentActorId !== cause.intentActorId) failAgency();
     }
     if (operation.kind === "ADD_EVENT") {
       const id = operation.intentActorId;
-      const actor = id === undefined ? undefined : input.state.actors[id];
-      if (id !== undefined && !actor && !input.state.npcs[id]) failAgency();
+      const actor = id == null ? undefined : input.state.actors[id];
+      if (id != null && !actor && !input.state.npcs[id]) failAgency();
       if (actor?.controller === "BILL" || actor?.controller === "RAVEN") {
         // ActorIntent represents an action, not a speech/thought/consent modality.
         if (operation.event.kind.toLowerCase() !== "action"
           || operation.event.text !== intentFor(id!)?.declaredAction) failAgency();
-      } else if (id === undefined && agencyKinds.has(operation.event.kind.toLowerCase())) failAgency();
+      } else if (id == null && agencyKinds.has(operation.event.kind.toLowerCase())) failAgency();
     }
     if (operation.kind === "SPEND_RESOURCE" || operation.kind === "MOVE_ACTOR") {
       const actor = input.state.actors[operation.actorId];

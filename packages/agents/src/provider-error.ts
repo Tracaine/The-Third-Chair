@@ -48,5 +48,9 @@ export function classifyProviderError(
   }
   if (metadata.some(({ status }) => status !== undefined && status >= 500)) return `${role}_PROVIDER_UNAVAILABLE`;
   if (hasStatus(400) || hasStatus(404) || hasStatus(422)) return `${role}_REQUEST_REJECTED`;
+  if (hasName("UserError")) return `${role}_SDK_CONFIGURATION_FAILED`;
+  if (hasName("ModelBehaviorError")) return `${role}_MODEL_BEHAVIOR_FAILED`;
+  if (hasName("MaxTurnsExceededError")) return `${role}_MAX_TURNS_EXCEEDED`;
+  if (hasName("ModelRefusalError")) return `${role}_MODEL_REFUSED`;
   return fallback;
 }
