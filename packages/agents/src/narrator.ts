@@ -5,6 +5,7 @@ import { buildNarratorInput } from "./context/narrator-context.js";
 import { validateNarration } from "./narration-validator.js";
 import { loadNarratorPrompt } from "./prompt-loader.js";
 import { AgentsSdkRunClient, type AgentRunClient } from "./runner.js";
+import { classifyProviderError } from "./provider-error.js";
 
 export interface NarratorRunContext { readonly abortSignal: AbortSignal; }
 export interface NarratorAdapterOptions { readonly config: AgentConfig; readonly runClient?: AgentRunClient; }
@@ -41,7 +42,9 @@ export class OpenAiNarratorAdapter implements NarratorPort {
         result = await this.#client.run(createNarratorAgent(this.#config), JSON.stringify(bounded), {
           context: { abortSignal: controller.signal }, maxTurns: 2, signal: controller.signal,
         });
-      } catch { throw new Error(controller.signal.aborted ? "NARRATOR_TIMEOUT" : "NARRATOR_RUN_FAILED"); }
+      } catch (error) {
+        throw new Error(controller.signal.aborted ? "NARRATOR_TIMEOUT" : classifyProviderError(error, "NARRATOR"));
+      }
       const narration = NarrationSchema.safeParse(result.finalOutput);
       if (!narration.success) throw new Error("NARRATOR_INVALID_OUTPUT");
       validateNarration(narration.data, bounded);

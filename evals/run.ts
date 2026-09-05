@@ -58,10 +58,14 @@ async function runCase(testCase: EvalCase, sourcePack: SourcePackService): Promi
     if (testCase.mode === "RESTART_AFTER_RESOLVED") {
       const first = createTurnEngine({ campaigns, turns, director, narrator: realNarrator,
         newTurnId: () => turnId, failureInjector: new FailureInjector("RESOLVED") });
-      try { await first.advanceGame(command); } catch { /* The stored RESOLVED row is the evidence. */ }
+      let interruptionError: unknown = null;
+      try { await first.advanceGame(command); } catch (error) { interruptionError = error; }
       const interrupted = turns.getTurn(turnId);
       const beforeDice = interrupted.resolutions?.map(({ naturalDice }) => [...naturalDice]) ?? null;
-      if (interrupted.status !== "RESOLVED" || beforeDice === null) throw new Error("RESTART_EVIDENCE_MISSING");
+      if (interrupted.status !== "RESOLVED" || beforeDice === null) {
+        const upstream = safeError(interruptionError);
+        throw new Error(upstream === "EVAL_FAILED" ? "RESTART_EVIDENCE_MISSING" : upstream);
+      }
       const resumed = await createTurnEngine({ campaigns, turns, director, narrator: realNarrator,
         newTurnId: () => "test_eval_unused_turn" }).advanceGame(command);
       const stored = turns.getTurn(turnId);

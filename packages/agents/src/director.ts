@@ -6,6 +6,7 @@ import { buildDirectorInput } from "./context/director-context.js";
 import { loadDirectorPrompt } from "./prompt-loader.js";
 import { AgentsSdkRunClient, type AgentRunClient, type SafeUsageCounters } from "./runner.js";
 import { serializeDirectorRepairInput } from "./repair.js";
+import { classifyProviderError } from "./provider-error.js";
 import { createDirectorTools, type DirectorRunContext } from "./tools/index.js";
 
 export interface DirectorMetrics {
@@ -186,7 +187,9 @@ export class OpenAiDirectorAdapter implements DirectorPort {
           context, maxTurns: 10, signal: controller.signal, toolExecution: { maxFunctionToolConcurrency: 1 },
           onToolInvoked: (name) => { if (suppliedNames.has(name)) invokedToolNames.add(name); },
         });
-      } catch { throw new Error(controller.signal.aborted ? "DIRECTOR_TIMEOUT" : "DIRECTOR_RUN_FAILED"); }
+      } catch (error) {
+        throw new Error(controller.signal.aborted ? "DIRECTOR_TIMEOUT" : classifyProviderError(error, "DIRECTOR"));
+      }
       if (controller.signal.aborted) throw new Error("DIRECTOR_TIMEOUT");
       // Metrics carry aggregates only. Telemetry failures cannot change adjudication.
       try {
@@ -235,7 +238,10 @@ export class OpenAiDirectorAdapter implements DirectorPort {
           context, maxTurns: 10, signal: controller.signal,
           toolExecution: { maxFunctionToolConcurrency: 1 },
         });
-      } catch { throw new Error(controller.signal.aborted ? "DIRECTOR_TIMEOUT" : "DIRECTOR_REPAIR_RUN_FAILED"); }
+      } catch (error) {
+        throw new Error(controller.signal.aborted ? "DIRECTOR_TIMEOUT"
+          : classifyProviderError(error, "DIRECTOR", "DIRECTOR_REPAIR_RUN_FAILED"));
+      }
       const parsed = TurnProposalSchema.safeParse(result.finalOutput);
       if (!parsed.success) throw new InvalidDirectorProposalError(result.finalOutput,
         parsed.error.issues.slice(0, 20).map((issue) => ({ path: pointer(issue.path), message: "INVALID_VALUE" })));
