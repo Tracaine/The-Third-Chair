@@ -11,6 +11,22 @@ export type BranchId = string;
 export type TurnId = string;
 export type ClientRequestId = string;
 
+export type CampaignCreationStatus = "PROCESSING" | "COMMITTED" | "FAILED";
+export interface CampaignCreationRequestRecord {
+  readonly requestId: string;
+  readonly ownerId: string;
+  readonly inputHash: string;
+  readonly status: CampaignCreationStatus;
+  readonly campaignId: string | null;
+  readonly error: JsonValue | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+export type BeginCampaignCreationResult = {
+  readonly kind: "STARTED" | "EXISTING";
+  readonly request: CampaignCreationRequestRecord;
+};
+
 export type CampaignStatus = "ACTIVE" | "READ_ONLY" | "ARCHIVED";
 export type TurnStatus =
   | "PROCESSING"
@@ -134,6 +150,13 @@ export interface CampaignRepository {
   createCampaign(input: CreateCampaignInput): CampaignRecord;
   getCampaign(campaignId: CampaignId): CampaignRecord;
   listCampaigns(): readonly CampaignRecord[];
+}
+
+export interface CampaignCreationRepository {
+  begin(input: { requestId: string; ownerId: string; inputHash: string; createdAt?: string }): BeginCampaignCreationResult;
+  commit(requestId: string, inputHash: string, campaign: CreateCampaignInput): CampaignRecord;
+  fail(requestId: string, inputHash: string, error: TurnFailure, failedAt?: string): CampaignCreationRequestRecord;
+  get(requestId: string): CampaignCreationRequestRecord;
 }
 
 export interface TurnRepository {

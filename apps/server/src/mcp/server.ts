@@ -1,5 +1,5 @@
 import type { CampaignRepository, TurnRepository } from "@third-chair/storage";
-import type { TurnEngine } from "@third-chair/engine";
+import type { CampaignBuilder, TurnEngine } from "@third-chair/engine";
 import type { SourcePackService } from "@third-chair/contracts";
 import { McpServer as SdkMcpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerAppResource, registerAppTool } from "@modelcontextprotocol/ext-apps/server";
@@ -9,13 +9,16 @@ import { listCampaigns, listCampaignsDescriptor } from "./tools/list-campaigns.j
 import { answerRules, answerRulesDescriptor } from "./tools/answer-rules.js";
 import { recallKnownLore, recallKnownLoreDescriptor } from "./tools/recall-known-lore.js";
 import { renderTable, renderTableDescriptor } from "./tools/render-table.js";
+import { createCampaign, createCampaignDescriptor } from "./tools/create-campaign.js";
 import { loadWidgetResource, TABLE_WIDGET_URI, type WidgetResource } from "./widget-resource.js";
 export interface McpServer { readonly tools: readonly { readonly name: string; readonly description: string; readonly inputSchema: unknown; readonly outputSchema: unknown; readonly annotations: object }[]; invoke(name: string, input: unknown): Promise<unknown>; }
-type ServerDependencies = { campaigns: CampaignRepository; turns: TurnRepository; engine: TurnEngine; sourcePack?: SourcePackService };
+type ServerDependencies = { campaigns: CampaignRepository; turns: TurnRepository; engine: TurnEngine; sourcePack?: SourcePackService; campaignCreator?: CampaignBuilder };
 function requireSourcePack(deps: ServerDependencies): SourcePackService { if (!deps.sourcePack) throw new Error("SOURCE_PACK_REQUIRED"); return deps.sourcePack; }
+function requireCampaignCreator(deps: ServerDependencies): CampaignBuilder { if (!deps.campaignCreator) throw new Error("CAMPAIGN_CREATOR_REQUIRED"); return deps.campaignCreator; }
 export function createMcpServer(deps: ServerDependencies): McpServer {
-  return { tools: [listCampaignsDescriptor, getTableViewDescriptor, advanceGameDescriptor, answerRulesDescriptor, recallKnownLoreDescriptor, renderTableDescriptor], async invoke(name, input) {
+  return { tools: [listCampaignsDescriptor, createCampaignDescriptor, getTableViewDescriptor, advanceGameDescriptor, answerRulesDescriptor, recallKnownLoreDescriptor, renderTableDescriptor], async invoke(name, input) {
     if (name === "list_campaigns") return listCampaigns(deps, input as never);
+    if (name === "create_campaign") return createCampaign({ campaignCreator: requireCampaignCreator(deps) }, input as never);
     if (name === "get_table_view") return getTableView(deps, input as never);
     if (name === "advance_game") return advanceGame(deps, input);
     if (name === "answer_rules") return answerRules({ ...deps, sourcePack: requireSourcePack(deps) }, input as never);
@@ -29,6 +32,7 @@ export function createMcpServer(deps: ServerDependencies): McpServer {
 export function createSdkMcpServer(deps: ServerDependencies, widgetResource: WidgetResource = loadWidgetResource()): SdkMcpServer {
   const server = new SdkMcpServer({ name: "third-chair", version: "0.1.0" });
   server.registerTool(listCampaignsDescriptor.name, { description: listCampaignsDescriptor.description, inputSchema: listCampaignsDescriptor.inputSchema, outputSchema: listCampaignsDescriptor.outputSchema, annotations: listCampaignsDescriptor.annotations }, async (input) => listCampaigns(deps, input));
+  server.registerTool(createCampaignDescriptor.name, { description: createCampaignDescriptor.description, inputSchema: createCampaignDescriptor.inputSchema, outputSchema: createCampaignDescriptor.outputSchema, annotations: createCampaignDescriptor.annotations }, async (input) => createCampaign({ campaignCreator: requireCampaignCreator(deps) }, input));
   server.registerTool(getTableViewDescriptor.name, { description: getTableViewDescriptor.description, inputSchema: getTableViewDescriptor.inputSchema, outputSchema: getTableViewDescriptor.outputSchema, annotations: getTableViewDescriptor.annotations }, async (input) => getTableView(deps, input));
   server.registerTool(advanceGameDescriptor.name, { description: advanceGameDescriptor.description, inputSchema: advanceGameDescriptor.inputSchema, outputSchema: advanceGameDescriptor.outputSchema, annotations: advanceGameDescriptor.annotations }, async (input) => advanceGame(deps, input));
   server.registerTool(answerRulesDescriptor.name, { description: answerRulesDescriptor.description, inputSchema: answerRulesDescriptor.inputSchema, outputSchema: answerRulesDescriptor.outputSchema, annotations: answerRulesDescriptor.annotations }, async (input) => answerRules({ ...deps, sourcePack: requireSourcePack(deps) }, input));

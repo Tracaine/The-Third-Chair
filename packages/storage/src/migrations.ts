@@ -47,6 +47,12 @@ const coreMigration: SqliteMigration = {
   sql: readFileSync(new URL("../migrations/001-core.sql", import.meta.url), "utf8"),
 };
 
+const creationMigration: SqliteMigration = {
+  version: 2,
+  name: "creation",
+  sql: readFileSync(new URL("../migrations/002-creation.sql", import.meta.url), "utf8"),
+};
+
 function orderedMigrations(migrations: readonly SqliteMigration[]): readonly SqliteMigration[] {
   const ordered = [...migrations].sort((left, right) => left.version - right.version);
   const seen = new Set<number>();
@@ -150,7 +156,7 @@ export function runMigrationsWithBackup(
   if (databasePath.trim().length === 0 || databasePath === ":memory:") {
     throw new Error("FILE_DATABASE_PATH_REQUIRED");
   }
-  const migrations = orderedMigrations(options.migrations ?? [coreMigration]);
+  const migrations = orderedMigrations(options.migrations ?? [coreMigration, creationMigration]);
   if (!existsSync(databasePath)) return migrateNewDatabase(databasePath, migrations);
 
   let db = openCampaignDatabase(databasePath);

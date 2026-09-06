@@ -7,7 +7,7 @@ describe("live model ports", () => {
   it("selects separate real Director and Narrator adapters without making an API call", () => {
     const sourcePack: SourcePackService = { searchRules: () => [], searchLore: () => [],
       searchTimeline: () => [], getEntity: () => null,
-      manifest: () => ({ sourcePackManifestHash: "test-pack" }) };
+      manifest: () => ({ sourcePackManifestHash: "test-pack" }), characterOptions: () => [] };
     const ports = createLiveModelPorts(loadAgentConfig({}), sourcePack);
     expect(ports.director).toBeInstanceOf(OpenAiDirectorAdapter);
     expect(ports.narrator).toBeInstanceOf(OpenAiNarratorAdapter);

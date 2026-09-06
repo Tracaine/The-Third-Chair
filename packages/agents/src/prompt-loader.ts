@@ -16,3 +16,11 @@ export function loadNarratorPrompt(): string {
     throw new Error("NARRATOR_PROMPT_UNAVAILABLE");
   }
 }
+
+export function loadCampaignSpinePrompt(): string {
+  try {
+    return readFileSync(new URL("../prompts/campaign-spine.md", import.meta.url), "utf8");
+  } catch {
+    throw new Error("CAMPAIGN_SPINE_PROMPT_UNAVAILABLE");
+  }
+}

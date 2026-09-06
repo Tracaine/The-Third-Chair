@@ -31,5 +31,6 @@ export function createFakeSourcePack(): SourcePackService {
     searchTimeline: () => [],
     getEntity: () => null,
     manifest: () => ({ sourcePackManifestHash: "test_fake_source_pack" }),
+    characterOptions: () => [],
   };
 }

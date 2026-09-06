@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import type { EntityResult, SourcePackManifestView, SourcePackService, SourceResult, TimelineResult } from "@third-chair/contracts";
+import { StructuredCharacterOptionSchema, type EntityResult, type SourcePackManifestView, type SourcePackService, type SourceResult, type TimelineResult } from "@third-chair/contracts";
 import type { AliasConfig } from "../indexing/entities.js";
 import aliases from "../../config/aliases.v1.json" with { type: "json" };
 import { delimitSourceData, safeFtsQuery } from "./query.js";
@@ -90,6 +90,21 @@ export class SqliteSourcePackService implements SourcePackService {
     const rows = this.db.prepare("SELECT key,value_json FROM source_pack_manifest").all() as Array<{ key: string; value_json: string }>;
     const result = Object.fromEntries(rows.map((row) => [row.key, JSON.parse(row.value_json)])) as SourcePackManifestView;
     return result;
+  }
+
+  characterOptions() {
+    const rows = this.db.prepare(`SELECT option_key,option_kind,display_name,rule_section_id,option_json
+      FROM character_options ORDER BY option_kind,option_key`).all() as unknown as Array<{
+        option_key: string; option_kind: "ANCESTRY" | "CLASS" | "BACKGROUND" | "EQUIPMENT" | "SPELL";
+        display_name: string; rule_section_id: string; option_json: string;
+      }>;
+    return rows.map((row) => StructuredCharacterOptionSchema.parse({
+      optionKey: row.option_key,
+      optionKind: row.option_kind,
+      displayName: row.display_name,
+      ruleSectionId: row.rule_section_id,
+      optionJson: JSON.parse(row.option_json),
+    }));
   }
 }
 

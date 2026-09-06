@@ -11,3 +11,4 @@ export * from "./proposals.js";
 export * from "./sources.js";
 export * from "./tools.js";
 export * from "./characters.js";
+export * from "./campaign-creation.js";

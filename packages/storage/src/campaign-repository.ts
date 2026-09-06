@@ -58,51 +58,39 @@ function parseCampaign(db: DatabaseSync, row: CampaignRow): CampaignRecord {
   };
 }
 
+export function insertCampaignRows(db: DatabaseSync, input: CreateCampaignInput): void {
+  const state = WorldStateSchema.parse(input.currentState);
+  const decision = DecisionRequestSchema.parse(state.currentDecision);
+  if (state.metadata.campaignId !== input.id) throw new Error("CAMPAIGN_STATE_ID_MISMATCH");
+  if (state.metadata.stateVersion !== decision.stateVersion) throw new Error("CAMPAIGN_DECISION_VERSION_MISMATCH");
+  if (input.rngSeed.byteLength !== 32) throw new Error("RNG_SEED_MUST_BE_32_BYTES");
+  if (input.currentStateHash.length === 0) throw new Error("STATE_HASH_REQUIRED");
+  const now = input.createdAt ?? new Date().toISOString();
+  db.prepare(`
+    INSERT INTO campaigns(
+      id, owner_id, name, source_pack_hash, rng_seed, state_version,
+      current_state_json, current_state_hash, current_decision_json,
+      active_branch_id, status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(input.id, input.ownerId, input.name, input.sourcePackHash, input.rngSeed,
+    state.metadata.stateVersion, JSON.stringify(state), input.currentStateHash,
+    JSON.stringify(decision), input.rootBranchId, input.status ?? "ACTIVE", now, now);
+  db.prepare(`
+    INSERT INTO branches(id, campaign_id, parent_branch_id, fork_turn_id, label, status, created_at)
+    VALUES (?, ?, NULL, NULL, ?, 'ACTIVE', ?)
+  `).run(input.rootBranchId, input.id, input.rootBranchLabel, now);
+  const branch = db.prepare("SELECT campaign_id FROM branches WHERE id = ?")
+    .get(input.rootBranchId) as { campaign_id: string } | undefined;
+  if (branch?.campaign_id !== input.id) throw new Error("ACTIVE_BRANCH_OWNERSHIP_MISMATCH");
+}
+
 class SqliteCampaignRepository implements CampaignRepository {
   constructor(private readonly db: DatabaseSync) {}
 
   createCampaign(input: CreateCampaignInput): CampaignRecord {
-    const state = WorldStateSchema.parse(input.currentState);
-    const decision = DecisionRequestSchema.parse(state.currentDecision);
-    if (state.metadata.campaignId !== input.id) throw new Error("CAMPAIGN_STATE_ID_MISMATCH");
-    if (state.metadata.stateVersion !== decision.stateVersion) {
-      throw new Error("CAMPAIGN_DECISION_VERSION_MISMATCH");
-    }
-    if (input.rngSeed.byteLength !== 32) throw new Error("RNG_SEED_MUST_BE_32_BYTES");
-    if (input.currentStateHash.length === 0) throw new Error("STATE_HASH_REQUIRED");
-    const now = input.createdAt ?? new Date().toISOString();
-
     this.db.exec("BEGIN IMMEDIATE");
     try {
-      this.db.prepare(`
-        INSERT INTO campaigns(
-          id, owner_id, name, source_pack_hash, rng_seed, state_version,
-          current_state_json, current_state_hash, current_decision_json,
-          active_branch_id, status, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        input.id,
-        input.ownerId,
-        input.name,
-        input.sourcePackHash,
-        input.rngSeed,
-        state.metadata.stateVersion,
-        JSON.stringify(state),
-        input.currentStateHash,
-        JSON.stringify(decision),
-        input.rootBranchId,
-        input.status ?? "ACTIVE",
-        now,
-        now,
-      );
-      this.db.prepare(`
-        INSERT INTO branches(id, campaign_id, parent_branch_id, fork_turn_id, label, status, created_at)
-        VALUES (?, ?, NULL, NULL, ?, 'ACTIVE', ?)
-      `).run(input.rootBranchId, input.id, input.rootBranchLabel, now);
-      const branch = this.db.prepare(
-        "SELECT campaign_id FROM branches WHERE id = ?",
-      ).get(input.rootBranchId) as { campaign_id: string } | undefined;
-      if (branch?.campaign_id !== input.id) throw new Error("ACTIVE_BRANCH_OWNERSHIP_MISMATCH");
+      insertCampaignRows(this.db, input);
       this.db.exec("COMMIT");
     } catch (error) {
       if (this.db.isTransaction) this.db.exec("ROLLBACK");

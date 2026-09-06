@@ -33,6 +33,7 @@ describe("campaign database migrations", () => {
       expect(tables).toEqual([
         "active_turns",
         "branches",
+        "campaign_creation_requests",
         "campaigns",
         "schema_migrations",
         "sqlite_sequence",
@@ -45,11 +46,12 @@ describe("campaign database migrations", () => {
         .all()
         .map((row) => (row as { name: string }).name);
       expect(indexes).toEqual([
+        "campaign_creation_status_idx",
         "recovery_commands_turn_idx",
         "turn_events_turn_idx",
         "turns_campaign_status_idx",
       ]);
-      expect(temp.db.prepare("SELECT version FROM schema_migrations").all()).toEqual([{ version: 1 }]);
+      expect(temp.db.prepare("SELECT version FROM schema_migrations ORDER BY version").all()).toEqual([{ version: 1 }, { version: 2 }]);
     } finally {
       temp.close();
       temp.cleanup();
@@ -59,14 +61,14 @@ describe("campaign database migrations", () => {
   it("backs up an existing file database before applying a pending migration", () => {
     const temp = createTempDatabase();
     const migration: SqliteMigration = {
-      version: 2,
+      version: 3,
       name: "add_marker",
       sql: "CREATE TABLE migration_marker (value TEXT NOT NULL);",
     };
     try {
       temp.close();
       const result = runMigrationsWithBackup(temp.path, { migrations: [migration] });
-      expect(result.appliedVersions).toEqual([2]);
+      expect(result.appliedVersions).toEqual([3]);
       expect(result.backupPath).toBeDefined();
       expect(existsSync(result.backupPath!)).toBe(true);
       const reopened = openCampaignDatabase(temp.path);
@@ -74,6 +76,7 @@ describe("campaign database migrations", () => {
       expect(reopened.prepare("SELECT version FROM schema_migrations ORDER BY version").all()).toEqual([
         { version: 1 },
         { version: 2 },
+        { version: 3 },
       ]);
       reopened.close();
     } finally {

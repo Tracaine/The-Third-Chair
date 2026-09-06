@@ -25,10 +25,20 @@ export type EntityResult = z.infer<typeof EntityResultSchema>;
 
 export interface SourcePackManifestView { sourcePackManifestHash: string; [key: string]: unknown }
 
+export const StructuredCharacterOptionSchema = z.object({
+  optionKey: z.string().trim().min(1).max(200),
+  optionKind: z.enum(["ANCESTRY", "CLASS", "BACKGROUND", "EQUIPMENT", "SPELL"]),
+  displayName: z.string().trim().min(1).max(200),
+  ruleSectionId: z.string().trim().min(1).max(300),
+  optionJson: z.unknown(),
+}).strict();
+export type StructuredCharacterOption = z.infer<typeof StructuredCharacterOptionSchema>;
+
 export interface SourcePackService {
   searchRules(input: { query: string; ruleKeys?: string[]; limit?: number }): SourceResult[];
   searchLore(input: { query: string; region?: string; asOfDr?: number; entityIds?: string[]; limit?: number }): SourceResult[];
   searchTimeline(input: { query?: string; entityIds?: string[]; fromDr?: number; toDr?: number; limit?: number }): TimelineResult[];
   getEntity(input: { nameOrAlias: string; asOfDr?: number }): EntityResult | null;
   manifest(): SourcePackManifestView;
+  characterOptions?(): readonly StructuredCharacterOption[];
 }

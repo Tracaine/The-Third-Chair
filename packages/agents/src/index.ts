@@ -11,3 +11,5 @@ export * from "./director.js";
 export * from "./repair.js";
 export * from "./narration-validator.js";
 export * from "./narrator.js";
+export * from "./campaign-spine.js";
+export * from "./prompt-loader.js";

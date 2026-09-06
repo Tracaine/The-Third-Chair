@@ -1,8 +1,8 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { createCampaignRepository, createTurnRepository, openCampaignDatabase, runMigrationsWithBackup } from "@third-chair/storage";
+import { createCampaignCreationRepository, createCampaignRepository, createTurnRepository, openCampaignDatabase, runMigrationsWithBackup } from "@third-chair/storage";
 import { WorldStateSchema, type ResolutionPlan } from "@third-chair/contracts";
-import { createTurnEngine, FakeDirector, FakeNarrator } from "@third-chair/engine";
+import { characterCatalogFromSourceOptions, createCampaignBuilder, createTurnEngine, FakeDirector, FakeNarrator } from "@third-chair/engine";
 import { loadAgentConfig } from "@third-chair/agents";
 import { createSqliteSourcePackService, openSourcePackReadOnly } from "@third-chair/source-pack";
 import { readConfig } from "./config.js";
@@ -11,12 +11,14 @@ import { createMcpServer, createSdkMcpServer } from "./mcp/server.js";
 import { loadWidgetResource } from "./mcp/widget-resource.js";
 import { createLiveModelPorts } from "./runtime/model-ports.js";
 import { createFakeSourcePack } from "./runtime/fake-source-pack.js";
+import { createFakeCampaignSpine } from "./runtime/fake-campaign-spine.js";
 import { DEFAULT_CAMPAIGN_DATABASE_PATH, DEFAULT_SOURCE_PACK_DATABASE_PATH } from "./project-paths.js";
 
 const config = readConfig();
 const databasePath = process.env.THIRD_CHAIR_DATABASE ?? DEFAULT_CAMPAIGN_DATABASE_PATH;
 mkdirSync(dirname(databasePath), { recursive: true }); runMigrationsWithBackup(databasePath);
 const db = openCampaignDatabase(databasePath); const campaigns = createCampaignRepository(db); const turns = createTurnRepository(db);
+const creationRequests = createCampaignCreationRepository(db);
 const sourcePackDb = config.fakeMode ? null : openSourcePackReadOnly(process.env.THIRD_CHAIR_SOURCE_PACK_DATABASE ?? DEFAULT_SOURCE_PACK_DATABASE_PATH);
 const sourcePack = sourcePackDb === null ? createFakeSourcePack() : createSqliteSourcePackService(sourcePackDb);
 const campaignId = "test_demo_campaign";
@@ -33,6 +35,12 @@ const fakePorts = () => ({
 });
 const ports = config.fakeMode ? fakePorts() : createLiveModelPorts(loadAgentConfig(process.env), sourcePack!);
 const engine = createTurnEngine({ campaigns, turns, director: ports.director, narrator: ports.narrator });
+const campaignCreator = createCampaignBuilder({ campaigns, creationRequests, sourcePack,
+  loadCharacterCatalog: () => {
+    if (!sourcePack.characterOptions) throw new Error("CHARACTER_OPTIONS_UNAVAILABLE");
+    return characterCatalogFromSourceOptions(sourcePack.characterOptions());
+  },
+  spine: config.fakeMode ? createFakeCampaignSpine() : (ports as ReturnType<typeof createLiveModelPorts>).campaignSpine });
 const widgetResource = loadWidgetResource();
-const mcp = createMcpServer({ campaigns, turns, engine, ...(sourcePack ? { sourcePack } : {}) });
-createHttpApp(mcp, config.fakeMode, () => createSdkMcpServer({ campaigns, turns, engine, ...(sourcePack ? { sourcePack } : {}) }, widgetResource)).listen(config.port, config.host, () => process.stdout.write(`Third Chair listening on ${config.host}:${config.port}\n`));
+const mcp = createMcpServer({ campaigns, turns, engine, sourcePack, campaignCreator });
+createHttpApp(mcp, config.fakeMode, () => createSdkMcpServer({ campaigns, turns, engine, sourcePack, campaignCreator }, widgetResource)).listen(config.port, config.host, () => process.stdout.write(`Third Chair listening on ${config.host}:${config.port}\n`));
