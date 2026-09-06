@@ -34,6 +34,23 @@ test("requires exact locked authority for player action, not a substring", async
   expect(await adapter(output).director.propose(directorInput())).toEqual(output);
 });
 
+test("identifies the exact player-authority operation for bounded repair", async () => {
+  const output = proposal();
+  output.checkLinkedOperations.push({ ...base, kind: "ADD_EVENT", intentActorId: "test_actor_bill",
+    cause: { type: "RESOLUTION", resolutionId: "test_resolution", allowedOutcomeTiers: ["SUCCESS"] },
+    event: { id: "test_event", audience: "PUBLIC", kind: "action", text: "Bill forces the door." } });
+  const input = { ...directorInput(), persistedResolutions: [{
+    id: "test_resolution", planId: "test_plan", actorId: "test_actor_bill", checkKind: "ability", key: "strength",
+    naturalDice: [14], keptDie: 14, modifier: 0, total: 14, target: 10, tier: "SUCCESS", visibility: "PUBLIC",
+    advantage: "NORMAL", advantageReason: "None", successStakes: "Opens", failureStakes: "Time passes",
+    citations: [], startingCounter: 0, endingCounter: 1,
+  } satisfies CheckResolution] };
+
+  await expect(adapter(output).director.propose(input)).rejects.toMatchObject({
+    issues: [{ path: "/checkLinkedOperations/0", message: "DIRECTOR_PLAYER_AUTHORITY_VIOLATION" }],
+  });
+});
+
 test.each(["dialogue", "thought", "consent", "reaction", "resource_commitment", "feeling"])("locked action text cannot authorize player %s modality", async (kind) => {
   for (const actorId of ["test_actor_bill", "test_actor_raven"]) {
     const output = proposal(); output.uncontestedOperations.push({ ...base, kind: "ADD_EVENT", intentActorId: actorId,

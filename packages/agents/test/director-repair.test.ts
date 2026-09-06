@@ -25,8 +25,9 @@ describe("Director repair", () => {
     expect(repaired).toEqual(proposal());
     expect(seen).toHaveLength(1);
     expect(Object.keys(JSON.parse(seen[0]!)).sort()).toEqual([
-      "invalidProposal", "issues", "lockedPlanId", "resolutions", "turnId",
+      "invalidProposal", "issues", "lockedIntents", "lockedPlanId", "resolutions", "turnId",
     ]);
+    expect(JSON.parse(seen[0]!).lockedIntents).toEqual(directorInput().intents);
     expect(seen[0]).not.toContain("currentDecision");
     expect(seen[0]).not.toContain("sourcePack");
   });

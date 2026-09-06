@@ -53,6 +53,13 @@ function requireLockedIntents(input: DirectorInput): void {
 
 // These are structured event kinds, not heuristics over character names or prose.
 const agencyKinds = new Set(["action", "dialogue", "thought", "consent", "reaction", "resource_commitment"]);
+class DirectorBoundaryError extends Error {
+  constructor(message: string, readonly issuePath: string) {
+    super(message);
+    this.name = "DirectorBoundaryError";
+  }
+}
+
 function validateBoundaries(input: DirectorInput, proposal: TurnProposal, resolutions: readonly CheckResolution[]): void {
   const intentFor = (id: string): ActorIntent | undefined => input.intents.find((intent) => intent.actorId === id && intent.mode === "ACT");
   const directorOwns = (id: string): boolean => input.state.actors[id]
@@ -60,14 +67,21 @@ function validateBoundaries(input: DirectorInput, proposal: TurnProposal, resolu
   const inventoryOwners = new Map(Object.values(input.state.inventory)
     .map((item) => [item.id, item.ownerActorId] as const));
   const reservedInventoryIds = new Set(inventoryOwners.keys());
-  const failAgency: () => never = () => { throw new Error("DIRECTOR_PLAYER_AUTHORITY_VIOLATION"); };
   if (proposal.narrativeBrief.requiredResolutionIds.some((id) => !resolutions.some((result) => result.id === id))) {
     throw new Error("DIRECTOR_UNKNOWN_RESOLUTION");
   }
   for (const operation of proposal.checkLinkedOperations) {
     if (operation.cause.type !== "RESOLUTION") throw new Error("DIRECTOR_UNKNOWN_RESOLUTION");
   }
-  for (const operation of [...proposal.uncontestedOperations, ...proposal.checkLinkedOperations]) {
+  const operationGroups = [
+    { field: "uncontestedOperations", operations: proposal.uncontestedOperations },
+    { field: "checkLinkedOperations", operations: proposal.checkLinkedOperations },
+  ] as const;
+  for (const { field, operations } of operationGroups) for (const [index, operation] of operations.entries()) {
+    const operationPath = `/${field}/${index}`;
+    const failAgency: () => never = () => {
+      throw new DirectorBoundaryError("DIRECTOR_PLAYER_AUTHORITY_VIOLATION", operationPath);
+    };
     const cause = operation.cause;
     if (cause.type === "RESOLUTION") {
       const result = resolutions.find((result) => result.id === cause.resolutionId);
@@ -142,7 +156,7 @@ function pointer(path: readonly PropertyKey[]): string {
 function safeIssue(error: unknown, path = "/"): { path: string; message: string } {
   const message = error instanceof Error && /^[A-Z][A-Z0-9_]{2,100}$/.test(error.message)
     ? error.message : "DIRECTOR_PROPOSAL_INVALID";
-  return { path, message };
+  return { path: error instanceof DirectorBoundaryError ? error.issuePath : path, message };
 }
 
 export class OpenAiDirectorAdapter implements DirectorPort {
@@ -218,7 +232,7 @@ export class OpenAiDirectorAdapter implements DirectorPort {
 
   async repair(repairInput: DirectorRepairInput, authoritative: DirectorInput): Promise<TurnProposal> {
     requireLockedIntents(authoritative);
-    const serialized = serializeDirectorRepairInput(repairInput);
+    const serialized = serializeDirectorRepairInput(repairInput, authoritative.intents);
     const config = this.#options.config;
     const agent = createDirectorAgent(config, this.#tools);
     const controller = new AbortController();

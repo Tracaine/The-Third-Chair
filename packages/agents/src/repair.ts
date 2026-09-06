@@ -1,10 +1,11 @@
 import { z } from "zod";
-import { OutcomeTierSchema, PersistedIdSchema } from "@third-chair/contracts";
+import { ActorIntentSchema, OutcomeTierSchema, PersistedIdSchema, type ActorIntent } from "@third-chair/contracts";
 import type { DirectorRepairInput } from "@third-chair/engine";
 
 const RepairInputSchema = z.object({
   turnId: PersistedIdSchema,
   lockedPlanId: PersistedIdSchema.nullable(),
+  lockedIntents: z.array(ActorIntentSchema).max(2),
   resolutions: z.array(z.object({ id: PersistedIdSchema, tier: OutcomeTierSchema }).strict()).max(20),
   invalidProposal: z.unknown(),
   issues: z.array(z.object({
@@ -14,6 +15,9 @@ const RepairInputSchema = z.object({
 }).strict();
 
 /** Serialize only repairable output and normalized diagnostics; hidden state remains local. */
-export function serializeDirectorRepairInput(input: DirectorRepairInput): string {
-  return JSON.stringify(RepairInputSchema.parse(input));
+export function serializeDirectorRepairInput(
+  input: DirectorRepairInput,
+  lockedIntents: readonly ActorIntent[],
+): string {
+  return JSON.stringify(RepairInputSchema.parse({ ...input, lockedIntents }));
 }
