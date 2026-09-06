@@ -1,13 +1,21 @@
 import { z } from "zod";
 import { ActorIntentSchema } from "./intents.js";
-import { DecisionModeSchema, DecisionRequestSchema } from "./decisions.js";
+import { DecisionModeSchema } from "./decisions.js";
 import { DecisionOwnerSchema, PersistedIdSchema, PlayerSeatSchema } from "./ids.js";
 import { CheckResolutionSchema } from "./resolutions.js";
 import { SourceCitationSchema, SourceResultSchema } from "./sources.js";
-import { PlayerViewSchema } from "./views.js";
+import { PlayerDecisionViewSchema, PlayerViewSchema } from "./views.js";
 
 const VisibleTextSchema = z.string().trim().max(2_000);
 const PlayerViewIdSchema = z.string().regex(/^[a-f0-9]{64}$/);
+
+export const AdvanceGameNarrationSchema = z.object({
+  sceneText: z.string().trim().min(1).max(8_000),
+  spokenNpcLines: z.array(z.string().trim().max(2_000)),
+  mustIncludeResolutionIds: z.array(z.string()),
+  mustIncludeEventIds: z.array(z.string()),
+  visibleEventIds: z.array(z.string()),
+}).strict();
 
 export const ListCampaignsInputSchema = z.object({ audience: PlayerSeatSchema }).strict();
 export const CampaignSummarySchema = z.object({
@@ -63,9 +71,9 @@ export const AdvanceGameOutputSchema = z.object({
   kind: z.enum(["COMMITTED", "ACTIVE_SUCCESSOR", "AWAITING_INPUT", "RECOVERY_REJECTED"]),
   lockedIntents: z.array(ActorIntentSchema),
   visibleRolls: z.array(CheckResolutionSchema),
-  narration: z.unknown(),
+  narration: AdvanceGameNarrationSchema.nullable(),
   currentStatus: z.object({ stateVersion: z.number().int().nonnegative() }).strict(),
-  nextDecision: DecisionRequestSchema,
+  nextDecision: PlayerDecisionViewSchema,
   view: PlayerViewSchema,
 }).strict();
 

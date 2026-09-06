@@ -1,4 +1,4 @@
-import type { CampaignRepository } from "@third-chair/storage";
+import type { CampaignRepository, TurnRepository } from "@third-chair/storage";
 import type { TurnEngine } from "@third-chair/engine";
 import type { SourcePackService } from "@third-chair/contracts";
 import { McpServer as SdkMcpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -11,7 +11,7 @@ import { recallKnownLore, recallKnownLoreDescriptor } from "./tools/recall-known
 import { renderTable, renderTableDescriptor } from "./tools/render-table.js";
 import { loadWidgetResource, TABLE_WIDGET_URI, type WidgetResource } from "./widget-resource.js";
 export interface McpServer { readonly tools: readonly { readonly name: string; readonly description: string; readonly inputSchema: unknown; readonly outputSchema: unknown; readonly annotations: object }[]; invoke(name: string, input: unknown): Promise<unknown>; }
-type ServerDependencies = { campaigns: CampaignRepository; engine: TurnEngine; sourcePack?: SourcePackService };
+type ServerDependencies = { campaigns: CampaignRepository; turns: TurnRepository; engine: TurnEngine; sourcePack?: SourcePackService };
 function requireSourcePack(deps: ServerDependencies): SourcePackService { if (!deps.sourcePack) throw new Error("SOURCE_PACK_REQUIRED"); return deps.sourcePack; }
 export function createMcpServer(deps: ServerDependencies): McpServer {
   return { tools: [listCampaignsDescriptor, getTableViewDescriptor, advanceGameDescriptor, answerRulesDescriptor, recallKnownLoreDescriptor, renderTableDescriptor], async invoke(name, input) {

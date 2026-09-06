@@ -50,6 +50,19 @@ export const AdvanceGameCommandSchema = z.discriminatedUnion("kind", [
   NarrationRecoveryCommandSchema,
 ]);
 
+// MCP SDK tool registration consumes an object shape. The handler still parses
+// the discriminated union above, which enforces the fields required by each kind.
+export const AdvanceGameMcpInputSchema = z.object({
+  kind: z.enum(["INTENTS", "NARRATION_RECOVERY"]),
+  campaignId: PersistedIdSchema,
+  expectedStateVersion: z.number().int().nonnegative(),
+  decisionId: PersistedIdSchema,
+  clientRequestId: PersistedIdSchema,
+  intents: z.array(ActorIntentSchema).optional(),
+  turnId: PersistedIdSchema.optional(),
+  acceptTerseRendering: z.boolean().optional(),
+}).strict();
+
 export type DecisionRequest = z.infer<typeof DecisionRequestSchema>;
 export type IntentAdvanceGameCommand = z.infer<typeof IntentAdvanceGameCommandSchema>;
 export type NarrationRecoveryCommand = z.infer<typeof NarrationRecoveryCommandSchema>;

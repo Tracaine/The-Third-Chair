@@ -4,6 +4,9 @@ import type { TurnEngine } from "@third-chair/engine";
 describe("player MCP descriptors", () => it("advertises safe annotations", () => {
   expect(getTableViewDescriptor.annotations).toEqual({ readOnlyHint: true, destructiveHint: false, openWorldHint: false, idempotentHint: true });
   expect(advanceGameDescriptor.annotations).toEqual({ readOnlyHint: false, destructiveHint: false, openWorldHint: false, idempotentHint: true });
+  expect(Object.keys(advanceGameDescriptor.inputSchema)).toEqual(expect.arrayContaining([
+    "kind", "campaignId", "expectedStateVersion", "decisionId", "clientRequestId", "intents", "turnId", "acceptTerseRendering",
+  ]));
 }));
 
 it("accepts a narration-recovery command through the public advance_game boundary", async () => {

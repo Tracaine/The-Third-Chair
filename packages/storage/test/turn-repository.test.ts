@@ -173,6 +173,36 @@ describe("turn reservation and stages", () => {
 });
 
 describe("atomic turn commit", () => {
+  it("lists committed campaign turns newest first with a bounded limit", () => {
+    const temp = createTempDatabase();
+    try {
+      const seeded = seedCampaign(temp.db, "recent");
+      const repo = createTurnRepository(temp.db);
+      const input = beginInput("recent");
+      repo.beginTurn(input);
+      const plan = resolutionPlan("recent");
+      repo.persistPlan(input.turnId, plan);
+      repo.persistResolutions(input.turnId, [checkResolution("recent", plan.id)], 1);
+      const { candidate, nextDecision } = committedCandidate(seeded.state, "recent", 1);
+      repo.persistProposal(input.turnId, turnProposal(nextDecision), candidate);
+      repo.commitTurn({
+        turnId: input.turnId,
+        candidateStateHash: "state-hash-recent-1",
+        narration: { sceneText: "The newest public consequence." },
+        nextDecision,
+      });
+
+      expect(repo.listRecentCommitted(seeded.campaignId, 1)).toMatchObject([
+        { id: input.turnId, status: "COMMITTED", committedStateVersion: 1 },
+      ]);
+      expect(repo.listRecentCommitted("test_campaign_missing", 6)).toEqual([]);
+      expect(() => repo.listRecentCommitted(seeded.campaignId, 0)).toThrow("INVALID_TURN_LIMIT");
+    } finally {
+      temp.close();
+      temp.cleanup();
+    }
+  });
+
   it("commits the candidate, ledger event, decision, RNG counter, and reservation release together", () => {
     const temp = createTempDatabase();
     try {

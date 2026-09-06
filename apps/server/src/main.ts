@@ -10,13 +10,14 @@ import { createHttpApp } from "./http/app.js";
 import { createMcpServer, createSdkMcpServer } from "./mcp/server.js";
 import { loadWidgetResource } from "./mcp/widget-resource.js";
 import { createLiveModelPorts } from "./runtime/model-ports.js";
+import { createFakeSourcePack } from "./runtime/fake-source-pack.js";
 
 const config = readConfig();
 const databasePath = process.env.THIRD_CHAIR_DATABASE ?? "./campaigns.sqlite";
 mkdirSync(dirname(databasePath), { recursive: true }); runMigrationsWithBackup(databasePath);
 const db = openCampaignDatabase(databasePath); const campaigns = createCampaignRepository(db); const turns = createTurnRepository(db);
 const sourcePackDb = config.fakeMode ? null : openSourcePackReadOnly(process.env.THIRD_CHAIR_SOURCE_PACK_DATABASE ?? "./private/source-pack.sqlite");
-const sourcePack = sourcePackDb === null ? null : createSqliteSourcePackService(sourcePackDb);
+const sourcePack = sourcePackDb === null ? createFakeSourcePack() : createSqliteSourcePackService(sourcePackDb);
 const campaignId = "test_demo_campaign";
 try { campaigns.getCampaign(campaignId); } catch {
   const decision = { id: "test_demo_decision", stateVersion: 0, mode: "EXPLORATION" as const, owner: "BOTH" as const, eligibleActorIds: ["test_demo_bill", "test_demo_raven"], situation: "A desk waits in a lamplit room.", constraints: "State your actions.", requiredInput: "Both players act.", legalOptions: [] };
@@ -29,9 +30,8 @@ const fakePorts = () => ({
   director: new FakeDirector((input) => { const plan: ResolutionPlan = { id: "test_demo_plan", checks: [{ id: "test_demo_check", actorId: "test_demo_raven", checkKind: "Investigation", key: "investigation", sides: 20, advantage: "NORMAL" as const, advantageReason: "No modifier", modifier: 0, dc: 10, visibility: "PUBLIC" as const, successStakes: "Find a clue", failureStakes: "Lose time", permittedOutcomeTiers: ["SUCCESS", "CRITICAL_SUCCESS", "FAILURE", "CRITICAL_FAILURE"], citations: ["SRD"] }] }; const rolls = input.runtime.lockAndResolveChecks(plan); return { uncontestedOperations: [], checkLinkedOperations: [{ id: "test_demo_fact", kind: "ADD_FACT" as const, reason: "Desk search", audience: "PARTY" as const, cause: { type: "RESOLUTION" as const, resolutionId: rolls.resolutions[0]!.id, allowedOutcomeTiers: [rolls.resolutions[0]!.tier] }, fact: { id: "test_demo_clue", audience: "PARTY" as const, kind: "Clue", text: "A note names a river crossing." } }], memoryWrites: [], riskTags: [], nextDecision: { ...input.state.currentDecision, id: "test_demo_next", stateVersion: 999, owner: "BILL" as const, eligibleActorIds: ["test_demo_bill"] }, narrativeBrief: { summary: "A clue is found.", requiredResolutionIds: ["test_demo_check"], requiredEventIds: [] } }; }),
   narrator: new FakeNarrator((input) => ({ sceneText: `Roll ${input.resolutions[0]?.keptDie ?? ""}: a clue emerges.`, spokenNpcLines: [], mustIncludeResolutionIds: input.proposal.narrativeBrief.requiredResolutionIds, mustIncludeEventIds: [], visibleEventIds: [] })),
 });
-if (!config.fakeMode && sourcePack === null) throw new Error("SOURCE_PACK_REQUIRED");
 const ports = config.fakeMode ? fakePorts() : createLiveModelPorts(loadAgentConfig(process.env), sourcePack!);
 const engine = createTurnEngine({ campaigns, turns, director: ports.director, narrator: ports.narrator });
 const widgetResource = loadWidgetResource();
-const mcp = createMcpServer({ campaigns, engine, ...(sourcePack ? { sourcePack } : {}) });
-createHttpApp(mcp, config.fakeMode, () => createSdkMcpServer({ campaigns, engine, ...(sourcePack ? { sourcePack } : {}) }, widgetResource)).listen(config.port, config.host, () => process.stdout.write(`Third Chair listening on ${config.host}:${config.port}\n`));
+const mcp = createMcpServer({ campaigns, turns, engine, ...(sourcePack ? { sourcePack } : {}) });
+createHttpApp(mcp, config.fakeMode, () => createSdkMcpServer({ campaigns, turns, engine, ...(sourcePack ? { sourcePack } : {}) }, widgetResource)).listen(config.port, config.host, () => process.stdout.write(`Third Chair listening on ${config.host}:${config.port}\n`));

@@ -151,4 +151,5 @@ export interface TurnRepository {
   abandonTurn(turnId: TurnId, failure: TurnFailure): void;
   getTurn(turnId: TurnId): TurnRecord;
   findByRequest(campaignId: CampaignId, clientRequestId: ClientRequestId): TurnRecord | null;
+  listRecentCommitted(campaignId: CampaignId, limit: number): readonly CommittedTurn[];
 }

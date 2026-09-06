@@ -512,6 +512,17 @@ class SqliteTurnRepository implements TurnRepository {
     ).get(campaignId, clientRequestId) as TurnRow | undefined;
     return row ? parseTurn(row) : null;
   }
+
+  listRecentCommitted(campaignId: CampaignId, limit: number): readonly CommittedTurn[] {
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new Error("INVALID_TURN_LIMIT");
+    const rows = this.db.prepare(`
+      SELECT * FROM turns
+      WHERE campaign_id = ? AND status = 'COMMITTED'
+      ORDER BY committed_state_version DESC
+      LIMIT ?
+    `).all(campaignId, limit) as unknown as TurnRow[];
+    return rows.map((row) => parseTurn(row) as CommittedTurn);
+  }
 }
 
 export function createTurnRepository(db: DatabaseSync): TurnRepository {
