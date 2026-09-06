@@ -1,0 +1,24 @@
+{
+  "name": "third-chair",
+  "version": "0.1.0",
+  "description": "A private persistent fantasy campaign table where two players share the story and a deterministic third chair holds the world.",
+  "author": { "name": "Bill and Raven" },
+  "license": "UNLICENSED",
+  "keywords": ["tabletop", "roleplaying", "campaign", "fifth-edition"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "The Third Chair",
+    "shortDescription": "A persistent private campaign table",
+    "longDescription": "Play a persistent SRD 5.1 fantasy campaign as two player seats while a deterministic server holds hidden truth, dice, rules, and continuity.",
+    "developerName": "Bill and Raven",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Read", "Write"],
+    "defaultPrompt": [
+      "Resume our Third Chair campaign.",
+      "Show us the table.",
+      "Answer this campaign rules question."
+    ],
+    "brandColor": "#6D466B"
+  }
+}
