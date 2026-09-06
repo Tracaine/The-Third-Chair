@@ -62,6 +62,11 @@ describe("invalid Director proposals", () => {
       expect(campaign.currentState).toEqual(fixture.state);
       const failed = fixture.turns.getTurn("test_turn_repair_failure");
       expect(failed).toMatchObject({ status: "FAILED", directorProposal: null, candidateState: null, narration: null });
+      expect(failed.failure?.details).toMatchObject({
+        stage: "CANDIDATE_VALIDATION",
+        initialIssues: [{ path: "/", message: "UNKNOWN_LOCATION" }],
+        repairIssues: [{ path: "/", message: "UNKNOWN_LOCATION" }],
+      });
       expect(JSON.stringify(failed.failure)).not.toContain("test_missing_location");
     } finally { fixture.temp.close(); fixture.temp.cleanup(); }
   });

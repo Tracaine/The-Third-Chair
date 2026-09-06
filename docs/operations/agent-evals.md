@@ -1,6 +1,6 @@
 # CHAIR-003 Real-Model Evaluation
 
-The live gate runs four authority-focused paths against temporary campaign databases and the verified private source pack. It stops at the first failed path to avoid spending calls on downstream cases that cannot complete the gate. It records only case name, pass/fail, elapsed time, final turn kind, roll count, and a normalized error code. Prompts, source passages, hidden state, narration, API credentials, and raw model output are never written to the result file.
+The live gate runs four authority-focused paths against temporary campaign databases and the verified private source pack. It stops at the first failed path to avoid spending calls on downstream cases that cannot complete the gate. It records only case name, pass/fail, elapsed time, final turn kind, roll count, a normalized error code, and bounded structural issue paths/codes when Director repair fails. Prompts, source passages, hidden state, narration, API credentials, and raw model output are never written to the result file.
 
 Before the four-case gate, run the one-Director-call private-development smoke from the repository root with locally configured `OPENAI_API_KEY`:
 
@@ -13,6 +13,14 @@ This smoke uses the real Director request boundary and prints only bounded diagn
 ```powershell
 npm run eval
 ```
+
+During diagnosis, one named case can be selected without spending calls on already-proven cases:
+
+```powershell
+$env:CHAIR_003_EVAL_CASE='narration-failure-after-roll'; npm run eval
+```
+
+Remove `CHAIR_003_EVAL_CASE` before the final gate so all four cases run.
 
 Both roles are fixed to `gpt-5.6-sol`; an environment model override is accepted only when it names that model. Optional environment settings are the reasoning settings and `THIRD_CHAIR_SOURCE_PACK_DATABASE`. Normal play and evaluation keep SDK tracing disabled unless the explicit private-development trace controls are enabled together.
 

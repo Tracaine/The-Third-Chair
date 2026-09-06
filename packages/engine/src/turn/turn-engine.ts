@@ -195,6 +195,8 @@ export function createTurnEngine(deps: TurnEngineDeps): TurnEngine {
           deps.turns.markFailed(turn.id, { code: "DIRECTOR_REPAIR_FAILED",
             message: "Director proposal failed validation after one repair.",
             details: { stage: "CANDIDATE_VALIDATION", turnId: turn.id, modelProfile: turn.modelProfile,
+              initialIssues: issues.map(({ path, message }) => ({ path, message })) as JsonValue,
+              repairIssues: finalIssues.map(({ path, message }) => ({ path, message })) as JsonValue,
               issues: finalIssues.map(({ path, message }) => ({ path, message })) as JsonValue } });
           throw new Error("DIRECTOR_REPAIR_FAILED");
         }

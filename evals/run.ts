@@ -6,11 +6,12 @@ import { loadAgentConfig, OpenAiDirectorAdapter, OpenAiNarratorAdapter } from "@
 import { createTurnEngine, FailureInjector, type NarratorPort, sha256Json } from "@third-chair/engine";
 import { createCampaignRepository, createTurnRepository, openCampaignDatabase, runMigrationsWithBackup } from "@third-chair/storage";
 import { createSqliteSourcePackService, openSourcePackReadOnly } from "@third-chair/source-pack";
+import { safeDirectorFailureDetails, selectEvalCases, type SafeDirectorFailureDetails } from "./eval-support.js";
 import { gradeChair003, type EvalExpectation } from "./graders.js";
 import { stateForCase } from "./fixture-state.js";
 
 interface EvalCase { name: string; mode: "NORMAL" | "FAIL_NARRATOR" | "RESTART_AFTER_RESOLVED"; declaredAction: string; desiredOutcome: string; approach: string; expectation: EvalExpectation; }
-interface RedactedResult { name: string; passed: boolean; elapsedMs: number; finalKind: string; rollCount: number; errorCode?: string; }
+interface RedactedResult { name: string; passed: boolean; elapsedMs: number; finalKind: string; rollCount: number; errorCode?: string; directorFailure?: SafeDirectorFailureDetails; }
 
 function safeError(error: unknown): string {
   return error instanceof Error && /^[A-Z][A-Z0-9_:.-]{2,100}$/.test(error.message) ? error.message : "EVAL_FAILED";
@@ -25,11 +26,13 @@ async function runCase(testCase: EvalCase, sourcePack: SourcePackService): Promi
   const started = performance.now();
   const directory = mkdtempSync(join(tmpdir(), "third-chair-eval-"));
   const path = join(directory, "campaigns.sqlite");
+  const turnId = `test_eval_turn_${testCase.name.replaceAll("-", "_")}`;
   let db: ReturnType<typeof openCampaignDatabase> | null = null;
+  let turns: ReturnType<typeof createTurnRepository> | null = null;
   try {
     runMigrationsWithBackup(path); db = openCampaignDatabase(path);
     const state = stateForCase(testCase.name);
-    const campaigns = createCampaignRepository(db); const turns = createTurnRepository(db);
+    const campaigns = createCampaignRepository(db); turns = createTurnRepository(db);
     campaigns.createCampaign({ id: state.metadata.campaignId, ownerId: "local", name: testCase.name,
       sourcePackHash: sourcePack.manifest().sourcePackManifestHash, rngSeed: new Uint8Array(32).fill(7),
       currentState: state, currentStateHash: sha256Json(state), rootBranchId: `test_eval_branch_${testCase.name.replaceAll("-", "_")}`,
@@ -44,8 +47,6 @@ async function runCase(testCase: EvalCase, sourcePack: SourcePackService): Promi
     const director = new OpenAiDirectorAdapter({ config, sourcePack });
     const realNarrator = new OpenAiNarratorAdapter({ config });
     const failedNarrator: NarratorPort = { narrate: () => { throw new Error("FORCED_NARRATOR_FAILURE"); } };
-    const turnId = `test_eval_turn_${testCase.name.replaceAll("-", "_")}`;
-
     if (testCase.mode === "RESTART_AFTER_RESOLVED") {
       const first = createTurnEngine({ campaigns, turns, director, narrator: realNarrator,
         newTurnId: () => turnId, failureInjector: new FailureInjector("RESOLVED") });
@@ -76,8 +77,16 @@ async function runCase(testCase: EvalCase, sourcePack: SourcePackService): Promi
     return { name: testCase.name, passed: gradeChair003(testCase.expectation, evidence),
       elapsedMs: Math.round(performance.now() - started), finalKind: result.kind, rollCount: evidence.rollCount };
   } catch (error) {
+    let rollCount = 0;
+    let directorFailure: SafeDirectorFailureDetails | undefined;
+    try {
+      const stored = turns?.getTurn(turnId);
+      rollCount = stored?.resolutions?.length ?? 0;
+      directorFailure = safeDirectorFailureDetails(stored?.failure);
+    } catch { /* The turn may not have been created before an upstream failure. */ }
     return { name: testCase.name, passed: false, elapsedMs: Math.round(performance.now() - started),
-      finalKind: "FAILED", rollCount: 0, errorCode: safeError(error) };
+      finalKind: "FAILED", rollCount, errorCode: safeError(error),
+      ...(directorFailure === undefined ? {} : { directorFailure }) };
   } finally { db?.close(); rmSync(directory, { recursive: true, force: true }); }
 }
 
@@ -86,7 +95,7 @@ const sourceDb = openSourcePackReadOnly(resolve(process.env.THIRD_CHAIR_SOURCE_P
 try {
   const sourcePack = createSqliteSourcePackService(sourceDb);
   const results: RedactedResult[] = [];
-  for (const testCase of cases()) {
+  for (const testCase of selectEvalCases(cases(), process.env.CHAIR_003_EVAL_CASE)) {
     const result = await runCase(testCase, sourcePack);
     results.push(result);
     if (!result.passed) break;
