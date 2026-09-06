@@ -1,6 +1,6 @@
 # CHAIR-003 Real-Model Evaluation
 
-The live gate runs four authority-focused paths against temporary campaign databases and the verified private source pack. It stops at the first failed path to avoid spending calls on downstream cases that cannot complete the gate. It records only case name, pass/fail, elapsed time, final turn kind, roll count, a normalized error code, and bounded structural issue paths/codes when Director repair fails. Prompts, source passages, hidden state, narration, API credentials, and raw model output are never written to the result file.
+The live gate runs four authority-focused paths against temporary campaign databases and the verified private source pack. It stops at the first failed path to avoid spending calls on downstream cases that cannot complete the gate. It records only case name, pass/fail, elapsed time, final turn kind, roll count, recovery-test state hashes, a normalized error code, and bounded structural issue paths/codes when Director repair fails. Prompts, source passages, hidden state, narration, API credentials, and raw model output are never written to the result file.
 
 Before the four-case gate, run the one-Director-call private-development smoke from the repository root with locally configured `OPENAI_API_KEY`:
 

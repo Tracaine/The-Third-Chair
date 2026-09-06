@@ -11,7 +11,7 @@ import { gradeChair003, type EvalExpectation } from "./graders.js";
 import { stateForCase } from "./fixture-state.js";
 
 interface EvalCase { name: string; mode: "NORMAL" | "FAIL_NARRATOR" | "RESTART_AFTER_RESOLVED"; declaredAction: string; desiredOutcome: string; approach: string; expectation: EvalExpectation; }
-interface RedactedResult { name: string; passed: boolean; elapsedMs: number; finalKind: string; rollCount: number; errorCode?: string; directorFailure?: SafeDirectorFailureDetails; }
+interface RedactedResult { name: string; passed: boolean; elapsedMs: number; finalKind: string; rollCount: number; errorCode?: string; directorFailure?: SafeDirectorFailureDetails; stateHashes?: { before: string; after: string }; }
 
 function safeError(error: unknown): string {
   return error instanceof Error && /^[A-Z][A-Z0-9_:.-]{2,100}$/.test(error.message) ? error.message : "EVAL_FAILED";
@@ -61,11 +61,13 @@ async function runCase(testCase: EvalCase, sourcePack: SourcePackService): Promi
       const resumed = await createTurnEngine({ campaigns, turns, director, narrator: realNarrator,
         newTurnId: () => "test_eval_unused_turn" }).advanceGame(command);
       const stored = turns.getTurn(turnId);
+      const resumedCampaign = campaigns.getCampaign(state.metadata.campaignId);
       const evidence = { finalKind: resumed.kind, rollCount: stored.resolutions?.length ?? 0,
-        rngCounter: campaigns.getCampaign(state.metadata.campaignId).currentState.metadata.rngCounter,
+        rngCounter: resumedCampaign.currentState.metadata.rngCounter,
         beforeDice, afterDice: stored.resolutions?.map(({ naturalDice }) => [...naturalDice]) ?? null };
       return { name: testCase.name, passed: gradeChair003(testCase.expectation, evidence),
-        elapsedMs: Math.round(performance.now() - started), finalKind: resumed.kind, rollCount: evidence.rollCount };
+        elapsedMs: Math.round(performance.now() - started), finalKind: resumed.kind, rollCount: evidence.rollCount,
+        stateHashes: { before: sha256Json(state), after: resumedCampaign.currentStateHash } };
     }
 
     const result = await createTurnEngine({ campaigns, turns, director,
@@ -75,7 +77,10 @@ async function runCase(testCase: EvalCase, sourcePack: SourcePackService): Promi
     const evidence = { finalKind: result.kind, rollCount: stored.resolutions?.length ?? 0,
       rngCounter: campaigns.getCampaign(state.metadata.campaignId).currentState.metadata.rngCounter };
     return { name: testCase.name, passed: gradeChair003(testCase.expectation, evidence),
-      elapsedMs: Math.round(performance.now() - started), finalKind: result.kind, rollCount: evidence.rollCount };
+      elapsedMs: Math.round(performance.now() - started), finalKind: result.kind, rollCount: evidence.rollCount,
+      ...(testCase.mode === "FAIL_NARRATOR" ? { stateHashes: {
+        before: sha256Json(state), after: campaigns.getCampaign(state.metadata.campaignId).currentStateHash,
+      } } : {}) };
   } catch (error) {
     let rollCount = 0;
     let directorFailure: SafeDirectorFailureDetails | undefined;
