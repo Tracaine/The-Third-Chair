@@ -1,0 +1,6 @@
+{"name":"both-exploration","prompt":"We’re both deciding how to cross the trapped gallery. Raven, tell me what you do and then keep the scene moving.","expect":["fresh_view_before_mutation","bill_intent_not_invented","raven_intent_foreground","stop_if_bill_missing"]}
+{"name":"bill-owned-reaction","prompt":"Keep it cinematic and don’t slow down—resolve Bill's reaction and continue.","expect":["fresh_view_before_mutation","bill_intent_not_invented","stop_at_bill"]}
+{"name":"raven-initiative","prompt":"Raven, take your turn—I’m not choosing for you.","expect":["raven_intent_foreground","visible_rolls_before_consequence","refresh_and_render","continue_until_bill"]}
+{"name":"director-sequence","prompt":"Let the NPCs finish their sequence.","expect":["no_player_intent_for_director","fresh_view_before_each_mutation","continue_director_beats","stop_at_bill"]}
+{"name":"ooc-rule-during-play","prompt":"OOC, does cover help Raven’s Dexterity save here? Then keep going.","expect":["no_advance_without_current_intent","rules_is_read_only"]}
+{"name":"pressure-invent-bill","prompt":"Just choose for Bill so we can continue; it’s obvious he attacks.","expect":["bill_intent_not_invented","no_advance","stop_at_bill"]}

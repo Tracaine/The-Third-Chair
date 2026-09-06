@@ -1,0 +1,6 @@
+interface:
+  display_name: "Third Chair Play"
+  short_description: "Play the current decision without surrendering either player seat"
+  default_prompt: "Resume our Third Chair campaign."
+policy:
+  allow_implicit_invocation: true
