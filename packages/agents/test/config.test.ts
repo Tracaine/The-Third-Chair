@@ -7,10 +7,10 @@ describe("loadAgentConfig", () => {
       directorModel: "gpt-5.6-sol",
       directorReasoning: "high",
       narratorModel: "gpt-5.6-sol",
-      narratorReasoning: "medium",
+      narratorReasoning: "low",
       traceMode: "off",
       directorTimeoutMs: 90_000,
-      narratorTimeoutMs: 45_000,
+      narratorTimeoutMs: 90_000,
     });
   });
 

@@ -31,6 +31,19 @@ function safeRepairValue(value: unknown): unknown {
   try { return JSON.parse(JSON.stringify(value ?? null)) as unknown; }
   catch { return null; }
 }
+function narrationRecoverySituation(error: unknown): string {
+  const code = error instanceof Error ? error.message : "";
+  if (code === "NARRATOR_TIMEOUT" || code === "NARRATOR_TRANSPORT_TIMEOUT") {
+    return "The turn is resolved, but the server-side Narrator timed out.";
+  }
+  if (code === "NARRATOR_QUOTA_EXHAUSTED") {
+    return "The turn is resolved, but the server-side Narrator could not run because API quota was exhausted.";
+  }
+  if (code === "NARRATOR_RATE_LIMITED") {
+    return "The turn is resolved, but the server-side Narrator was rate limited.";
+  }
+  return "The turn is resolved, but the server-side Narrator could not produce valid narration.";
+}
 export interface TurnEngine { advanceGame(command: AdvanceGameCommand): Promise<AdvanceGameResult>; }
 export function createTurnEngine(deps: TurnEngineDeps): TurnEngine {
   const mutex = new KeyedMutex();
@@ -223,16 +236,17 @@ export function createTurnEngine(deps: TurnEngineDeps): TurnEngine {
         visibleEvents, proposal,
       };
       let narration: ReturnType<typeof NarrationSchema.parse> | null = null;
+      let narrationFailure: unknown = null;
       for (let attempt = 0; attempt < 2 && narration === null; attempt += 1) {
         try { narration = NarrationSchema.parse(await deps.narrator.narrate(narratorInput)); }
-        catch { /* Retry once against the identical persisted candidate. */ }
+        catch (error) { narrationFailure = error; /* Retry once against the identical persisted candidate. */ }
       }
       if (narration === null) {
         const recoveryDecision = DecisionRequestSchema.parse({
           id: (deps.newRecoveryDecisionId ?? nextRecoveryId)(), stateVersion: turn.expectedStateVersion,
           mode: "CLARIFICATION", owner: "BILL", eligibleActorIds: Object.entries(turn.beforeState.actors)
             .filter(([, actor]) => actor.controller === "BILL").map(([id]) => id),
-          situation: "The turn is resolved, but narration could not be produced.", constraints: "No reroll or state change is allowed.",
+          situation: narrationRecoverySituation(narrationFailure), constraints: "No reroll or state change is allowed.",
           requiredInput: "Use terse deterministic rendering for this already-resolved turn?",
           legalOptions: ["Use terse rendering", "Reject this successor"],
         });

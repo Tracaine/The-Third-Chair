@@ -20,7 +20,7 @@ function setup(suffix: string) {
       narrativeBrief: { summary: "The locked attempt resolves.", requiredResolutionIds: result.resolutions.map(({ id }) => id), requiredEventIds: [] } };
     return proposal;
   });
-  const narrator = new FakeNarrator(() => { throw new Error("MODEL_NARRATION_FAILED"); });
+  const narrator = new FakeNarrator(() => { throw new Error("NARRATOR_TIMEOUT"); });
   const intents: AdvanceGameCommand = { kind: "INTENTS", campaignId: state.metadata.campaignId,
     expectedStateVersion: 0, decisionId: state.currentDecision.id, clientRequestId: `test_request_${suffix}`,
     intents: [{ seat: "BILL", actorId: "test_actor_bill", mode: "ACT", declaredAction: "Open the door",
@@ -37,6 +37,9 @@ describe("Narrator recovery", () => {
     try {
       const awaiting = await fixture.engine.advanceGame(fixture.intents);
       expect(awaiting.kind).toBe("AWAITING_INPUT");
+      expect(awaiting.view.currentDecision.situation).toBe(
+        "The turn is resolved, but the server-side Narrator timed out.",
+      );
       expect(fixture.narrator.calls).toBe(2);
       expect(fixture.campaigns.getCampaign(fixture.state.metadata.campaignId).stateVersion).toBe(0);
       const interrupted = fixture.turns.getTurn("test_turn_narrator_accept");

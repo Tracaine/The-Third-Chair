@@ -4,10 +4,10 @@ export const AgentConfigSchema = z.object({
   directorModel: z.literal("gpt-5.6-sol").default("gpt-5.6-sol"),
   directorReasoning: z.enum(["low", "medium", "high", "xhigh", "max"]).default("high"),
   narratorModel: z.literal("gpt-5.6-sol").default("gpt-5.6-sol"),
-  narratorReasoning: z.enum(["low", "medium", "high", "xhigh", "max"]).default("medium"),
+  narratorReasoning: z.enum(["low", "medium", "high", "xhigh", "max"]).default("low"),
   traceMode: z.enum(["off", "private_dev"]).default("off"),
   directorTimeoutMs: z.number().int().min(1_000).max(120_000).default(90_000),
-  narratorTimeoutMs: z.number().int().min(1_000).max(120_000).default(45_000),
+  narratorTimeoutMs: z.number().int().min(1_000).max(120_000).default(90_000),
 });
 
 export type AgentConfig = z.infer<typeof AgentConfigSchema>;

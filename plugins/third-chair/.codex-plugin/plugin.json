@@ -7,6 +7,7 @@
   "keywords": ["tabletop", "roleplaying", "campaign", "fifth-edition"],
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
+  "apps": "./.app.json",
   "interface": {
     "displayName": "The Third Chair",
     "shortDescription": "A persistent private campaign table",

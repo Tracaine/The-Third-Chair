@@ -21,6 +21,14 @@ Keep both player seats sovereign while moving through server-owned beats. SQLite
 6. Fetch `get_table_view` again, then call `render_table` with that exact `playerViewId`.
 7. Continue the loop only while the fresh decision belongs to DIRECTOR or RAVEN. Stop immediately when BILL owns it, or when BOTH still needs Bill's intent.
 
+## Narration recovery
+
+When the fresh view contains `NARRATION_RECOVERY`, the Director and deterministic resolution have already finished but the separate server-side Narrator did not. Never call this a Director failure, invent missing scene facts, resubmit intents, or reroll.
+
+1. Show Bill the returned visible checks and the two stored recovery choices, then stop for his explicit decision.
+2. If Bill chooses terse rendering or rejection, fetch a fresh view and call `advance_game` with `kind: NARRATION_RECOVERY`, the exact current campaign/state/decision/turn IDs, a fresh client request ID, and the matching `acceptTerseRendering` boolean.
+3. After acceptance commits, fetch a fresh view and render that exact view. After rejection, report that the unresolved successor was discarded and the prior committed state remains authoritative.
+
 ## Quick reference
 
 | Fresh owner | Action |
@@ -36,3 +44,4 @@ Keep both player seats sovereign while moving through server-owned beats. SQLite
 - A rules answer is not an action declaration.
 - Rendering an old view does not refresh authority.
 - Narration, repair, restart, and recovery never justify a reroll.
+- The foreground player presents committed narration; she does not replace the server-side Narrator or invent uncommitted facts.

@@ -49,7 +49,7 @@ describe("private Third Chair plugin package", () => {
     }
   });
 
-  it("excludes private sources, dangerous extensions, and fake app registrations", () => {
+  it("excludes private sources and binds only the registered Third Chair app", () => {
     const forbiddenDirectory = /(^|[/\\])(project_sources|private|data)([/\\]|$)/;
     const forbiddenExtension = /\.(pdf|sqlite|env)$/i;
     for (const path of walk(pluginRoot)) {
@@ -61,9 +61,17 @@ describe("private Third Chair plugin package", () => {
     }
 
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as PluginManifest;
-    const appPath = join(pluginRoot, ".app.json");
-    expect(() => lstatSync(appPath)).toThrow();
-    expect(manifest.apps).toBeUndefined();
+    expect(manifest.apps).toBe("./.app.json");
+    const app = JSON.parse(readFileSync(join(pluginRoot, ".app.json"), "utf8")) as {
+      apps: Record<string, { id: string }>;
+    };
+    expect(app).toEqual({
+      apps: {
+        "dev-6a9da421c1c08191ba5b6c5b50adc39c": {
+          id: "asdk_app_6a9da421c1c08191ba5b6c5b50adc39c",
+        },
+      },
+    });
   });
 
   it("passes the package validator and writes an ignored distributable", () => {
