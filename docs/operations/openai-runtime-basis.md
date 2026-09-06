@@ -17,3 +17,5 @@ Checked on 2026-09-05 against the current official TypeScript Agents SDK documen
 Resolved npm package: `@openai/agents@0.17.0`.
 
 The installed declarations place model, model settings, tools, and output type on a fresh `Agent`; local context, maximum turns, and abort signal on each non-streaming run; aggregate usage on the run state; and `traceIncludeSensitiveData` on `Runner` configuration. The application wrapper returns only final output and aggregate request/token counters. It supplies no SDK session and does not return SDK history or run state.
+
+The Director remains bounded by an abort signal. Its default allowance is 90 seconds within the designed 120-second maximum; the original 60-second default was raised after a valid check-bearing live run reached persisted resolution and then hit that boundary at 60.044 seconds. Director model, high reasoning effort, output validation, and tool limits are unchanged.

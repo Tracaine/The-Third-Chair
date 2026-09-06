@@ -6,7 +6,7 @@ export const AgentConfigSchema = z.object({
   narratorModel: z.literal("gpt-5.6-sol").default("gpt-5.6-sol"),
   narratorReasoning: z.enum(["low", "medium", "high", "xhigh", "max"]).default("medium"),
   traceMode: z.enum(["off", "private_dev"]).default("off"),
-  directorTimeoutMs: z.number().int().min(1_000).max(120_000).default(60_000),
+  directorTimeoutMs: z.number().int().min(1_000).max(120_000).default(90_000),
   narratorTimeoutMs: z.number().int().min(1_000).max(120_000).default(45_000),
 });
 
