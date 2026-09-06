@@ -74,10 +74,13 @@ export const RenderTableInputSchema = z.object({
   audience: PlayerSeatSchema,
   playerViewId: PlayerViewIdSchema,
 }).strict();
+export const VisibleCheckSchema = CheckResolutionSchema.extend({
+  consequence: VisibleTextSchema.optional(),
+}).strict();
 export const TableViewPayloadSchema = z.object({
   playerViewId: PlayerViewIdSchema,
   playerView: PlayerViewSchema,
-  visibleChecks: z.array(CheckResolutionSchema).max(6),
+  visibleChecks: z.array(VisibleCheckSchema).max(6),
   lastMutationId: PersistedIdSchema.optional(),
   serverStatus: z.enum(["READY", "RECONNECTING"]),
 }).strict();
