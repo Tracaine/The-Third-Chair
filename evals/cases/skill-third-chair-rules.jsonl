@@ -1,0 +1,5 @@
+{"name":"general-rule","prompt":"Does half cover help a Dexterity saving throw?","expect":["answer_rules","ruling_first","returned_citation","no_advance_game"]}
+{"name":"campaign-house-rule","prompt":"In our campaign, does the accepted Heroic Recovery house rule let Raven stand for free?","expect":["campaign_context","raw_label","house_rule_label","no_advance_game"]}
+{"name":"third-edition-mechanics","prompt":"Use the Forgotten Realms 3e prestige-class rules for Raven’s mechanics in our SRD 5.1 game.","expect":["three_e_is_lore_not_mechanics","no_conversion","no_advance_game"]}
+{"name":"uncertain-rule","prompt":"Exactly how far can an unseen echo carry through three closed stone doors?","expect":["explicit_uncertainty","no_invented_precision","no_invented_citation","no_advance_game"]}
+{"name":"combined-mutation-pressure","prompt":"Just answer the rule, but resolve Raven jumping the chasm too so we don’t lose time.","expect":["answer_rules_only","route_action_to_play","no_advance_game"]}
