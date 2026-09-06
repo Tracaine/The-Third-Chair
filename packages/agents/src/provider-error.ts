@@ -6,7 +6,10 @@ export interface ProviderFailureDiagnostic {
   readonly type?: string;
   readonly param?: string;
   readonly name?: string;
+  readonly causeName?: string;
+  readonly localCode?: string;
   readonly requestId?: string;
+  readonly toolName?: string;
 }
 
 function safeText(value: unknown, lowerCase = false): string | undefined {
@@ -18,15 +21,19 @@ function safeText(value: unknown, lowerCase = false): string | undefined {
 function safeMetadata(error: unknown): ProviderFailureDiagnostic[] {
   const metadata: ProviderFailureDiagnostic[] = [];
   const seen = new Set<object>();
-  let current = error;
-  for (let depth = 0; depth < 5 && typeof current === "object" && current !== null; depth += 1) {
-    if (seen.has(current)) break;
+  const pending: unknown[] = [error];
+  for (let step = 0; step < 10 && pending.length > 0; step += 1) {
+    const current = pending.shift();
+    if (typeof current !== "object" || current === null) continue;
+    if (seen.has(current)) continue;
     seen.add(current);
     const value = current as Record<string, unknown>;
     const code = safeText(value.code, true);
     const type = safeText(value.type, true);
     const param = safeText(value.param);
     const name = safeText(value.name);
+    const localCode = typeof value.message === "string" && /^[A-Z][A-Z0-9_:.-]{2,100}$/.test(value.message)
+      ? value.message : undefined;
     const requestId = safeText(value.requestID ?? value.requestId ?? value.request_id);
     metadata.push({
       ...(Number.isInteger(value.status) && (value.status as number) >= 100 && (value.status as number) <= 599
@@ -35,9 +42,10 @@ function safeMetadata(error: unknown): ProviderFailureDiagnostic[] {
       ...(type === undefined ? {} : { type }),
       ...(param === undefined ? {} : { param }),
       ...(name === undefined ? {} : { name }),
+      ...(localCode === undefined ? {} : { localCode }),
       ...(requestId === undefined ? {} : { requestId }),
     });
-    current = value.cause;
+    pending.push(value.cause, value.error);
   }
   return metadata;
 }
@@ -45,7 +53,11 @@ function safeMetadata(error: unknown): ProviderFailureDiagnostic[] {
 export function providerFailureDiagnostic(error: unknown): ProviderFailureDiagnostic {
   const merged: Record<string, unknown> = {};
   for (const item of safeMetadata(error)) {
-    for (const [key, value] of Object.entries(item)) if (merged[key] === undefined) merged[key] = value;
+    for (const [key, value] of Object.entries(item)) {
+      if (key === "name" && merged.name !== undefined && merged.name !== value && merged.causeName === undefined) {
+        merged.causeName = value;
+      } else if (merged[key] === undefined) merged[key] = value;
+    }
   }
   return merged as ProviderFailureDiagnostic;
 }
@@ -53,10 +65,12 @@ export function providerFailureDiagnostic(error: unknown): ProviderFailureDiagno
 export class SanitizedProviderError extends Error {
   readonly diagnostic: ProviderFailureDiagnostic;
 
-  constructor(code: string, error: unknown) {
+  constructor(code: string, error: unknown, toolName?: string) {
     super(code);
     this.name = "SanitizedProviderError";
-    this.diagnostic = providerFailureDiagnostic(error);
+    const diagnostic = providerFailureDiagnostic(error);
+    const safeToolName = safeText(toolName);
+    this.diagnostic = safeToolName === undefined ? diagnostic : { ...diagnostic, toolName: safeToolName };
   }
 }
 
@@ -86,5 +100,9 @@ export function classifyProviderError(
   if (hasName("ModelBehaviorError")) return `${role}_MODEL_BEHAVIOR_FAILED`;
   if (hasName("MaxTurnsExceededError")) return `${role}_MAX_TURNS_EXCEEDED`;
   if (hasName("ModelRefusalError")) return `${role}_MODEL_REFUSED`;
+  if (hasName("InvalidToolInputError")) return `${role}_TOOL_INPUT_INVALID`;
+  if (hasName("InvalidToolOutputError")) return `${role}_TOOL_OUTPUT_INVALID`;
+  if (hasName("ToolTimeoutError")) return `${role}_TOOL_TIMEOUT`;
+  if (hasName("ToolCallError")) return `${role}_TOOL_CALL_FAILED`;
   return fallback;
 }

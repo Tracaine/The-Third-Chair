@@ -46,10 +46,27 @@ describe("provider error classification", () => {
     expect(JSON.stringify(diagnostic)).not.toContain("secret");
   });
 
+  test("walks the SDK tool-error wrapper without retaining its messages or state", () => {
+    const diagnostic = agents.providerFailureDiagnostic({
+      name: "ToolCallError",
+      message: "contains model-produced arguments",
+      state: { history: "secret" },
+      error: { name: "InvalidToolInputError", message: "invalid raw input" },
+    });
+    expect(diagnostic).toEqual({ name: "ToolCallError", causeName: "InvalidToolInputError" });
+    expect(JSON.stringify(diagnostic)).not.toMatch(/model-produced|raw input|history|secret/);
+    expect(agents.classifyProviderError({
+      name: "ToolCallError", error: { name: "InvalidToolInputError" },
+    }, "DIRECTOR")).toBe("DIRECTOR_TOOL_INPUT_INVALID");
+  });
+
   test("director preserves safe diagnostics without exposing the provider message", async () => {
-    const run = vi.fn().mockRejectedValue({
-      status: 400, code: "invalid_function_parameters", type: "invalid_request_error",
-      param: "tools[2].parameters", requestID: "req_safe_123", message: "account details",
+    const run = vi.fn(async (_agent, _input, options) => {
+      options.onToolInvoked?.("search_lore_internal");
+      throw {
+        status: 400, code: "invalid_function_parameters", type: "invalid_request_error",
+        param: "tools[2].parameters", requestID: "req_safe_123", message: "account details",
+      };
     });
     const director = new agents.OpenAiDirectorAdapter({
       config: agents.loadAgentConfig({}), sourcePack, runClient: { run }, preserveProviderDiagnostics: true,
@@ -60,7 +77,7 @@ describe("provider error classification", () => {
       message: "DIRECTOR_REQUEST_REJECTED",
       diagnostic: {
         status: 400, code: "invalid_function_parameters", type: "invalid_request_error",
-        param: "tools[2].parameters", requestId: "req_safe_123",
+        param: "tools[2].parameters", requestId: "req_safe_123", toolName: "search_lore_internal",
       },
     });
     expect(JSON.stringify(error)).not.toContain("account details");

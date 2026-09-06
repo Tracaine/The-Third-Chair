@@ -8,7 +8,7 @@ Before the four-case gate, run the one-Director-call private-development smoke f
 $env:NODE_ENV='development'; $env:THIRD_CHAIR_PRIVATE_DEV='1'; npm run eval:director-smoke
 ```
 
-This smoke uses the real Director request boundary and prints only bounded diagnostics: status, provider code/type, parameter, exception name, and request ID when supplied. It never prints provider messages, headers, bodies, prompts, source passages, or credentials. Normal tracing remains disabled. After the smoke passes, run:
+This smoke uses the real Director request boundary and prints only bounded diagnostics: status, provider code/type, parameter, wrapper/root exception names, invoked tool name, application error code, and request ID when supplied. It never prints provider messages, headers, bodies, prompts, source passages, model-produced tool arguments, or credentials. Normal tracing remains disabled. After the smoke passes, run:
 
 ```powershell
 npm run eval

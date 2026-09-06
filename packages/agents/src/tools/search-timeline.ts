@@ -6,8 +6,8 @@ import {
 } from "./context.js";
 
 const ParametersSchema = z.object({
-  query: QuerySchema.optional(), entityIds: FilterListSchema.optional(),
-  fromDr: DateSchema.optional(), toDr: DateSchema.optional(), limit: LimitSchema.optional(),
+  query: QuerySchema.nullish(), entityIds: FilterListSchema.nullish(),
+  fromDr: DateSchema.nullish(), toDr: DateSchema.nullish(), limit: LimitSchema.nullish(),
 }).strict().refine((input) => (input.fromDr ?? -100_000) <= (input.toDr ?? 1375), {
   path: ["fromDr"], message: "fromDr must not exceed toDr",
 });
@@ -24,9 +24,9 @@ export const searchTimelineTool = tool({
     const toDr = Math.min(input.toDr ?? 1375, 1375);
     const results = ResultsSchema.parse(await context.sourcePack.searchTimeline({
       limit, toDr,
-      ...(input.query === undefined ? {} : { query: input.query }),
-      ...(input.entityIds === undefined ? {} : { entityIds: input.entityIds }),
-      ...(input.fromDr === undefined ? {} : { fromDr: input.fromDr }),
+      ...(input.query == null ? {} : { query: input.query }),
+      ...(input.entityIds == null ? {} : { entityIds: input.entityIds }),
+      ...(input.fromDr == null ? {} : { fromDr: input.fromDr }),
     })).filter((result) => result.yearStartDr <= toDr && result.yearEndDr <= toDr).slice(0, limit);
     return retrievalOutput(results, results.map((result) => result.citation));
   },

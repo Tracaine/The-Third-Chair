@@ -6,7 +6,7 @@ import {
 } from "./context.js";
 
 const ParametersSchema = z.object({
-  query: QuerySchema, ruleKeys: FilterListSchema.optional(), limit: LimitSchema.optional(),
+  query: QuerySchema, ruleKeys: FilterListSchema.nullish(), limit: LimitSchema.nullish(),
 }).strict();
 const ResultsSchema = z.array(StrictSourceResultSchema.extend({ kind: z.literal("RULE") }));
 
@@ -19,7 +19,7 @@ export const searchRulesTool = tool({
     const context = retrievalContext(runContext);
     const limit = Math.min(input.limit ?? 6, 6);
     const results = ResultsSchema.parse(await context.sourcePack.searchRules({
-      query: input.query, limit, ...(input.ruleKeys === undefined ? {} : { ruleKeys: input.ruleKeys }),
+      query: input.query, limit, ...(input.ruleKeys == null ? {} : { ruleKeys: input.ruleKeys }),
     })).slice(0, limit);
     return retrievalOutput(results, results.map((result) => result.citation));
   },

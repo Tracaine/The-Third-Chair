@@ -5,7 +5,7 @@ import {
   DateSchema, FilterSchema, retrievalContext, retrievalOutput, retrievalPolicy, type DirectorRunContext,
 } from "./context.js";
 
-const ParametersSchema = z.object({ nameOrAlias: FilterSchema, asOfDr: DateSchema.optional() }).strict();
+const ParametersSchema = z.object({ nameOrAlias: FilterSchema, asOfDr: DateSchema.nullish() }).strict();
 const ResultSchema = EntityResultSchema.strict().nullable();
 
 export const getEntityTool = tool({

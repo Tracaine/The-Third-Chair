@@ -6,8 +6,8 @@ import {
 } from "./context.js";
 
 const ParametersSchema = z.object({
-  query: QuerySchema, region: FilterSchema.optional(), entityIds: FilterListSchema.optional(),
-  asOfDr: DateSchema.optional(), limit: LimitSchema.optional(),
+  query: QuerySchema, region: FilterSchema.nullish(), entityIds: FilterListSchema.nullish(),
+  asOfDr: DateSchema.nullish(), limit: LimitSchema.nullish(),
 }).strict();
 const ResultsSchema = z.array(StrictSourceResultSchema.extend({ kind: z.literal("LORE") }));
 
@@ -21,8 +21,8 @@ export const searchLoreTool = tool({
     const limit = Math.min(input.limit ?? 8, 8);
     const results = ResultsSchema.parse(await context.sourcePack.searchLore({
       query: input.query, limit, asOfDr: Math.min(input.asOfDr ?? 1375, 1375),
-      ...(input.region === undefined ? {} : { region: input.region }),
-      ...(input.entityIds === undefined ? {} : { entityIds: input.entityIds }),
+      ...(input.region == null ? {} : { region: input.region }),
+      ...(input.entityIds == null ? {} : { entityIds: input.entityIds }),
     })).slice(0, limit);
     return retrievalOutput(results, results.map((result) => result.citation));
   },

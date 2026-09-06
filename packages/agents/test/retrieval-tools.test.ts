@@ -78,6 +78,23 @@ describe("private retrieval tools", () => {
     expect(service.getEntity).toHaveBeenCalledWith({ nameOrAlias: "City of Splendors", asOfDr: 1300 });
   });
 
+  it("accepts strict-wire nulls and normalizes them to absent application filters", async () => {
+    const { service, runContext } = fixture();
+    const [rules, loreTool, timeline, entity] = retrievalTools();
+    await rules.invoke(runContext, JSON.stringify({ query: "check", ruleKeys: null, limit: null }));
+    await loreTool.invoke(runContext, JSON.stringify({
+      query: "city", region: null, entityIds: null, asOfDr: null, limit: null,
+    }));
+    await timeline.invoke(runContext, JSON.stringify({
+      query: null, entityIds: null, fromDr: null, toDr: null, limit: null,
+    }));
+    await entity.invoke(runContext, JSON.stringify({ nameOrAlias: "Waterdeep", asOfDr: null }));
+    expect(service.searchRules).toHaveBeenCalledWith({ query: "check", limit: 6 });
+    expect(service.searchLore).toHaveBeenCalledWith({ query: "city", limit: 8, asOfDr: 1375 });
+    expect(service.searchTimeline).toHaveBeenCalledWith({ limit: 20, toDr: 1375 });
+    expect(service.getEntity).toHaveBeenCalledWith({ nameOrAlias: "Waterdeep", asOfDr: 1375 });
+  });
+
   it.each([
     [0, { query: " " }], [0, { query: "x".repeat(2001) }], [0, { query: "x", ruleKeys: [" "] }],
     [0, { query: "x", ruleKeys: Array(21).fill("key") }], [0, { query: "x", limit: 101 }],

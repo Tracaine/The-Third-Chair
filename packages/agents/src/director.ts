@@ -194,6 +194,7 @@ export class OpenAiDirectorAdapter implements DirectorPort {
         throw new SanitizedProviderError(
           classifyProviderError(error, "DIRECTOR"),
           this.#options.preserveProviderDiagnostics === true ? error : undefined,
+          this.#options.preserveProviderDiagnostics === true ? [...invokedToolNames].at(-1) : undefined,
         );
       }
       if (controller.signal.aborted) throw new Error("DIRECTOR_TIMEOUT");
@@ -222,6 +223,8 @@ export class OpenAiDirectorAdapter implements DirectorPort {
     const agent = createDirectorAgent(config, this.#tools);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), config.directorTimeoutMs);
+    const invokedToolNames = new Set<string>();
+    const suppliedNames = new Set(this.#tools.map((tool) => tool.name));
     let persistedResolutions = [...authoritative.persistedResolutions];
     const context: DirectorRunContext = {
       turnId: authoritative.turnId, campaignId: authoritative.state.metadata.campaignId,
@@ -243,12 +246,14 @@ export class OpenAiDirectorAdapter implements DirectorPort {
         result = await this.#client.run(agent, serialized, {
           context, maxTurns: 10, signal: controller.signal,
           toolExecution: { maxFunctionToolConcurrency: 1 },
+          onToolInvoked: (name) => { if (suppliedNames.has(name)) invokedToolNames.add(name); },
         });
       } catch (error) {
         if (controller.signal.aborted) throw new Error("DIRECTOR_TIMEOUT");
         throw new SanitizedProviderError(
           classifyProviderError(error, "DIRECTOR", "DIRECTOR_REPAIR_RUN_FAILED"),
           this.#options.preserveProviderDiagnostics === true ? error : undefined,
+          this.#options.preserveProviderDiagnostics === true ? [...invokedToolNames].at(-1) : undefined,
         );
       }
       const parsed = TurnProposalSchema.safeParse(result.finalOutput);
