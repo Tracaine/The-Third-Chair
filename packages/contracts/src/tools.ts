@@ -69,7 +69,22 @@ export const AdvanceGameOutputSchema = z.object({
   view: PlayerViewSchema,
 }).strict();
 
+export const RenderTableInputSchema = z.object({
+  campaignId: PersistedIdSchema,
+  audience: PlayerSeatSchema,
+  playerViewId: PlayerViewIdSchema,
+}).strict();
+export const TableViewPayloadSchema = z.object({
+  playerViewId: PlayerViewIdSchema,
+  playerView: PlayerViewSchema,
+  visibleChecks: z.array(CheckResolutionSchema).max(6),
+  lastMutationId: PersistedIdSchema.optional(),
+  serverStatus: z.enum(["READY", "RECONNECTING"]),
+}).strict();
+
 export type ListCampaignsInput = z.infer<typeof ListCampaignsInputSchema>;
 export type GetTableViewInput = z.infer<typeof GetTableViewInputSchema>;
 export type AnswerRulesInput = z.infer<typeof AnswerRulesInputSchema>;
 export type RecallKnownLoreInput = z.infer<typeof RecallKnownLoreInputSchema>;
+export type RenderTableInput = z.infer<typeof RenderTableInputSchema>;
+export type TableViewPayload = z.infer<typeof TableViewPayloadSchema>;

@@ -8,6 +8,7 @@ import { createSqliteSourcePackService, openSourcePackReadOnly } from "@third-ch
 import { readConfig } from "./config.js";
 import { createHttpApp } from "./http/app.js";
 import { createMcpServer, createSdkMcpServer } from "./mcp/server.js";
+import { loadWidgetResource } from "./mcp/widget-resource.js";
 import { createLiveModelPorts } from "./runtime/model-ports.js";
 
 const config = readConfig();
@@ -31,5 +32,6 @@ const fakePorts = () => ({
 if (!config.fakeMode && sourcePack === null) throw new Error("SOURCE_PACK_REQUIRED");
 const ports = config.fakeMode ? fakePorts() : createLiveModelPorts(loadAgentConfig(process.env), sourcePack!);
 const engine = createTurnEngine({ campaigns, turns, director: ports.director, narrator: ports.narrator });
+const widgetResource = loadWidgetResource();
 const mcp = createMcpServer({ campaigns, engine, ...(sourcePack ? { sourcePack } : {}) });
-createHttpApp(mcp, config.fakeMode, () => createSdkMcpServer({ campaigns, engine, ...(sourcePack ? { sourcePack } : {}) })).listen(config.port, config.host, () => process.stdout.write(`Third Chair listening on ${config.host}:${config.port}\n`));
+createHttpApp(mcp, config.fakeMode, () => createSdkMcpServer({ campaigns, engine, ...(sourcePack ? { sourcePack } : {}) }, widgetResource)).listen(config.port, config.host, () => process.stdout.write(`Third Chair listening on ${config.host}:${config.port}\n`));

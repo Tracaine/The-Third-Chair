@@ -15,6 +15,7 @@ evals/results/*.json
 node_modules/
 dist/
 coverage/
+*.tsbuildinfo
 *.bak
 *.log
 *.zip

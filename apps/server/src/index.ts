@@ -6,5 +6,7 @@ export * from "./mcp/tools/advance-game.js";
 export * from "./mcp/tools/list-campaigns.js";
 export * from "./mcp/tools/answer-rules.js";
 export * from "./mcp/tools/recall-known-lore.js";
+export * from "./mcp/tools/render-table.js";
+export * from "./mcp/widget-resource.js";
 export * from "./http/app.js";
 export * from "./runtime/model-ports.js";
