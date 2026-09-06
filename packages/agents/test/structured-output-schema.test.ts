@@ -43,4 +43,21 @@ describe("live structured output schemas", () => {
       }
     }
   });
+
+  test("exposes persisted-ID constraints to the Director instead of hiding runtime refinements", () => {
+    const lockTool = createDirectorTools().find(({ name }) => name === "lock_and_resolve_checks");
+    const parameters = lockTool?.parameters as {
+      properties?: {
+        id?: { pattern?: string };
+        checks?: { items?: { properties?: Record<string, { pattern?: string }> } };
+      };
+    };
+    expect(parameters.properties?.id?.pattern).toBeTypeOf("string");
+    expect(parameters.properties?.checks?.items?.properties?.id?.pattern).toBe(
+      parameters.properties?.id?.pattern,
+    );
+    expect(parameters.properties?.checks?.items?.properties?.actorId?.pattern).toBe(
+      parameters.properties?.id?.pattern,
+    );
+  });
 });

@@ -1,8 +1,7 @@
 import { z } from "zod";
 
-export const PersistedIdSchema = z.string().refine(
-  (value) =>
-    /^test_[a-z0-9_]+$/.test(value) || /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(value),
+export const PersistedIdSchema = z.string().regex(
+  /^(?:test_[a-z0-9_]+|[0-9a-fA-F]{8}-[0-9a-fA-F-]{27})$/,
   "Expected UUID or test fixture ID",
 );
 
