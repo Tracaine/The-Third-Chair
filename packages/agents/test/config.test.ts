@@ -6,11 +6,23 @@ describe("loadAgentConfig", () => {
     expect(loadAgentConfig({})).toEqual({
       directorModel: "gpt-5.6-sol",
       directorReasoning: "high",
-      narratorModel: "gpt-5.6-terra",
+      narratorModel: "gpt-5.6-sol",
       narratorReasoning: "medium",
       traceMode: "off",
       directorTimeoutMs: 60_000,
       narratorTimeoutMs: 45_000,
+    });
+  });
+
+  it("rejects every non-Sol model override", () => {
+    expect(() => loadAgentConfig({ DIRECTOR_MODEL: "unsupported-model" })).toThrow();
+    expect(() => loadAgentConfig({ NARRATOR_MODEL: "unsupported-model" })).toThrow();
+    expect(loadAgentConfig({
+      DIRECTOR_MODEL: "gpt-5.6-sol",
+      NARRATOR_MODEL: "gpt-5.6-sol",
+    })).toMatchObject({
+      directorModel: "gpt-5.6-sol",
+      narratorModel: "gpt-5.6-sol",
     });
   });
 

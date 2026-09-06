@@ -22,7 +22,7 @@ describe("Narrator adapter", () => {
       mustIncludeResolutionIds: [], mustIncludeEventIds: [], visibleEventIds: [] };
     const run: AgentRunClient["run"] = async (agent, serialized, options) => {
       expect(agent.name).toBe("Third Chair Narrator");
-      expect(agent.model).toBe("configured-narrator");
+      expect(agent.model).toBe("gpt-5.6-sol");
       expect(agent.modelSettings).toEqual({ reasoning: { effort: "medium" }, text: { verbosity: "low" } });
       expect(agent.tools).toEqual([]);
       expect(agent.outputType).toBe(NarrationSchema);
@@ -33,7 +33,7 @@ describe("Narrator adapter", () => {
       return { finalOutput: narration, usage: { requests: 1, inputTokens: 10, outputTokens: 5, totalTokens: 15 } };
     };
     const adapter = new agents.OpenAiNarratorAdapter({
-      config: agents.loadAgentConfig({ NARRATOR_MODEL: "configured-narrator" }), runClient: { run },
+      config: agents.loadAgentConfig({}), runClient: { run },
     });
     await expect(adapter.narrate(input())).resolves.toEqual(narration);
   });

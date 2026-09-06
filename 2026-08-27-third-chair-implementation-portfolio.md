@@ -23,7 +23,7 @@
 - Stakes are persisted before resolution, dice are deterministic and immutable, and every check-caused operation cites a compatible resolution ID.
 - No SQLite transaction remains open during a model call.
 - A mutating request commits once or not at all and is idempotent by campaign ID plus client request ID.
-- Director defaults to `gpt-5.6-sol` with `reasoning.effort: "high"`; Narrator defaults to `gpt-5.6-terra` with `reasoning.effort: "medium"`.
+- Director and Narrator both use `gpt-5.6-sol`; Director uses `reasoning.effort: "high"` and Narrator uses `reasoning.effort: "medium"`.
 - The Director and Narrator are invoked fresh for every decision. Durable Agents SDK sessions are not used.
 - Agents receive bounded projections and retrieval results, never whole PDFs, whole databases, arbitrary filesystem access, shell access, or network access.
 - Normal play sets `OPENAI_AGENTS_DISABLE_TRACING=1`. Private development tracing may be enabled only with sensitive inputs and outputs excluded.
@@ -370,7 +370,7 @@ CAMPAIGN_DB_PATH=./data/campaigns.sqlite
 SOURCE_PACK_DB_PATH=./private/source-pack.sqlite
 DIRECTOR_MODEL=gpt-5.6-sol
 DIRECTOR_REASONING=high
-NARRATOR_MODEL=gpt-5.6-terra
+NARRATOR_MODEL=gpt-5.6-sol
 NARRATOR_REASONING=medium
 THIRD_CHAIR_TRACE_MODE=off
 OPENAI_AGENTS_DISABLE_TRACING=1
@@ -445,7 +445,6 @@ At the start of CHAIR-003 and CHAIR-004 execution, fetch the current official pa
 - [Agents SDK](https://developers.openai.com/api/docs/guides/agents)
 - [Agents SDK orchestration](https://developers.openai.com/api/docs/guides/agents/orchestration)
 - [GPT-5.6 Sol](https://developers.openai.com/api/docs/models/gpt-5.6-sol)
-- [GPT-5.6 Terra](https://developers.openai.com/api/docs/models/gpt-5.6-terra)
 
 ## 13. Definition of Portfolio Completion
 

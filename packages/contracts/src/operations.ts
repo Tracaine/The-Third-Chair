@@ -1,6 +1,8 @@
 import { z } from "zod";
+import { DecisionRequestSchema } from "./decisions.js";
 import { AudienceSchema, PersistedIdSchema } from "./ids.js";
 import { OutcomeTierSchema } from "./resolutions.js";
+import { CombatStateSchema } from "./world-state.js";
 
 const Text = z.string().trim().min(1).max(2_000);
 const Base = z.object({ id: PersistedIdSchema, reason: Text, audience: AudienceSchema });
@@ -22,7 +24,7 @@ export const WorldOperationSchema = z.discriminatedUnion("kind", [
   WithCause.extend({ kind: z.literal("ADD_INVENTORY"), item: z.object({ id: PersistedIdSchema, name: Text, ownerActorId: PersistedIdSchema.nullable(), containerId: PersistedIdSchema.nullable(), quantity: z.number().int().nonnegative(), equippedSlots: z.array(Text), facts: z.array(z.object({ id: PersistedIdSchema, audience: AudienceSchema, kind: Text, text: Text }).strict()) }).strict() }).strict(),
   WithCause.extend({ kind: z.literal("REMOVE_INVENTORY"), itemId: PersistedIdSchema }).strict(),
   WithCause.extend({ kind: z.literal("SET_EQUIPPED"), itemId: PersistedIdSchema, slots: z.array(Text) }).strict(),
-  WithCause.extend({ kind: z.literal("SET_COMBAT"), combat: z.unknown().nullable() }).strict(),
+  WithCause.extend({ kind: z.literal("SET_COMBAT"), combat: CombatStateSchema.nullable() }).strict(),
   WithCause.extend({ kind: z.literal("ADVANCE_INITIATIVE") }).strict(),
   WithCause.extend({ kind: z.literal("ADD_FACT"), fact: z.object({ id: PersistedIdSchema, audience: AudienceSchema, kind: Text, text: Text }).strict() }).strict(),
   WithCause.extend({ kind: z.literal("ADD_EVENT"), event: z.object({ id: PersistedIdSchema, audience: AudienceSchema, kind: Text, text: Text }).strict(), intentActorId: PersistedIdSchema.nullish() }).strict(),
@@ -30,7 +32,7 @@ export const WorldOperationSchema = z.discriminatedUnion("kind", [
   WithCause.extend({ kind: z.literal("SET_NPC_ATTITUDE"), npcId: PersistedIdSchema, status: Text }).strict(),
   WithCause.extend({ kind: z.literal("SET_QUEST_STATUS"), questId: PersistedIdSchema, status: Text }).strict(),
   WithCause.extend({ kind: z.literal("SET_FLAG"), flag: z.object({ id: PersistedIdSchema, audience: AudienceSchema, key: Text, text: Text }).strict() }).strict(),
-  WithCause.extend({ kind: z.literal("SET_DECISION"), decision: z.unknown() }).strict(),
+  WithCause.extend({ kind: z.literal("SET_DECISION"), decision: DecisionRequestSchema }).strict(),
 ]);
 export type OperationCause = z.infer<typeof OperationCauseSchema>;
 export type WorldOperation = z.infer<typeof WorldOperationSchema>;

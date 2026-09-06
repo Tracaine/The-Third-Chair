@@ -6,7 +6,7 @@ import { buildDirectorInput } from "./context/director-context.js";
 import { loadDirectorPrompt } from "./prompt-loader.js";
 import { AgentsSdkRunClient, type AgentRunClient, type SafeUsageCounters } from "./runner.js";
 import { serializeDirectorRepairInput } from "./repair.js";
-import { classifyProviderError } from "./provider-error.js";
+import { classifyProviderError, SanitizedProviderError } from "./provider-error.js";
 import { createDirectorTools, type DirectorRunContext } from "./tools/index.js";
 
 export interface DirectorMetrics {
@@ -23,6 +23,8 @@ export interface DirectorAdapterOptions {
   readonly runClient?: AgentRunClient;
   readonly tools?: readonly Tool<DirectorRunContext>[];
   readonly onMetrics?: (metrics: DirectorMetrics) => void;
+  /** Opt-in for the gated private-development smoke only. Never enable during normal play. */
+  readonly preserveProviderDiagnostics?: boolean;
 }
 
 export function createDirectorAgent(config: AgentConfig, tools: readonly Tool<DirectorRunContext>[]) {
@@ -188,7 +190,11 @@ export class OpenAiDirectorAdapter implements DirectorPort {
           onToolInvoked: (name) => { if (suppliedNames.has(name)) invokedToolNames.add(name); },
         });
       } catch (error) {
-        throw new Error(controller.signal.aborted ? "DIRECTOR_TIMEOUT" : classifyProviderError(error, "DIRECTOR"));
+        if (controller.signal.aborted) throw new Error("DIRECTOR_TIMEOUT");
+        throw new SanitizedProviderError(
+          classifyProviderError(error, "DIRECTOR"),
+          this.#options.preserveProviderDiagnostics === true ? error : undefined,
+        );
       }
       if (controller.signal.aborted) throw new Error("DIRECTOR_TIMEOUT");
       // Metrics carry aggregates only. Telemetry failures cannot change adjudication.
@@ -239,8 +245,11 @@ export class OpenAiDirectorAdapter implements DirectorPort {
           toolExecution: { maxFunctionToolConcurrency: 1 },
         });
       } catch (error) {
-        throw new Error(controller.signal.aborted ? "DIRECTOR_TIMEOUT"
-          : classifyProviderError(error, "DIRECTOR", "DIRECTOR_REPAIR_RUN_FAILED"));
+        if (controller.signal.aborted) throw new Error("DIRECTOR_TIMEOUT");
+        throw new SanitizedProviderError(
+          classifyProviderError(error, "DIRECTOR", "DIRECTOR_REPAIR_RUN_FAILED"),
+          this.#options.preserveProviderDiagnostics === true ? error : undefined,
+        );
       }
       const parsed = TurnProposalSchema.safeParse(result.finalOutput);
       if (!parsed.success) throw new InvalidDirectorProposalError(result.finalOutput,

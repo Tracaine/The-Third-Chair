@@ -15,6 +15,7 @@
     "dev:server": "npm run dev --workspace @third-chair/server",
     "dev:widget": "npm run dev --workspace @third-chair/widget",
     "eval": "node --import tsx evals/run.ts",
+    "eval:director-smoke": "node --import tsx evals/smoke-director.ts",
     "verify:private": "node scripts/verify-private-boundary.mjs"
   },
   "devDependencies": {

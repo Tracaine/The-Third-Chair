@@ -13,7 +13,6 @@ Checked on 2026-09-05 against the current official TypeScript Agents SDK documen
 - Tracing: https://openai.github.io/openai-agents-js/guides/tracing/
 - OpenAI Agents SDK guide: https://developers.openai.com/api/docs/guides/agents
 - GPT-5.6 Sol: https://developers.openai.com/api/docs/models/gpt-5.6-sol
-- GPT-5.6 Terra: https://developers.openai.com/api/docs/models/gpt-5.6-terra
 
 Resolved npm package: `@openai/agents@0.17.0`.
 

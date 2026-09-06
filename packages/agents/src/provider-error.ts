@@ -1,29 +1,63 @@
 export type ProviderRole = "DIRECTOR" | "NARRATOR";
 
-interface SafeProviderMetadata {
+export interface ProviderFailureDiagnostic {
   readonly status?: number;
   readonly code?: string;
   readonly type?: string;
+  readonly param?: string;
   readonly name?: string;
+  readonly requestId?: string;
 }
 
-function safeMetadata(error: unknown): SafeProviderMetadata[] {
-  const metadata: SafeProviderMetadata[] = [];
+function safeText(value: unknown, lowerCase = false): string | undefined {
+  if (typeof value !== "string" || value.length === 0 || value.length > 200
+    || !/^[A-Za-z0-9_.:[\]-]+$/.test(value)) return undefined;
+  return lowerCase ? value.toLowerCase() : value;
+}
+
+function safeMetadata(error: unknown): ProviderFailureDiagnostic[] {
+  const metadata: ProviderFailureDiagnostic[] = [];
   const seen = new Set<object>();
   let current = error;
   for (let depth = 0; depth < 5 && typeof current === "object" && current !== null; depth += 1) {
     if (seen.has(current)) break;
     seen.add(current);
     const value = current as Record<string, unknown>;
+    const code = safeText(value.code, true);
+    const type = safeText(value.type, true);
+    const param = safeText(value.param);
+    const name = safeText(value.name);
+    const requestId = safeText(value.requestID ?? value.requestId ?? value.request_id);
     metadata.push({
-      ...(typeof value.status === "number" ? { status: value.status } : {}),
-      ...(typeof value.code === "string" ? { code: value.code.toLowerCase() } : {}),
-      ...(typeof value.type === "string" ? { type: value.type.toLowerCase() } : {}),
-      ...(typeof value.name === "string" ? { name: value.name } : {}),
+      ...(Number.isInteger(value.status) && (value.status as number) >= 100 && (value.status as number) <= 599
+        ? { status: value.status as number } : {}),
+      ...(code === undefined ? {} : { code }),
+      ...(type === undefined ? {} : { type }),
+      ...(param === undefined ? {} : { param }),
+      ...(name === undefined ? {} : { name }),
+      ...(requestId === undefined ? {} : { requestId }),
     });
     current = value.cause;
   }
   return metadata;
+}
+
+export function providerFailureDiagnostic(error: unknown): ProviderFailureDiagnostic {
+  const merged: Record<string, unknown> = {};
+  for (const item of safeMetadata(error)) {
+    for (const [key, value] of Object.entries(item)) if (merged[key] === undefined) merged[key] = value;
+  }
+  return merged as ProviderFailureDiagnostic;
+}
+
+export class SanitizedProviderError extends Error {
+  readonly diagnostic: ProviderFailureDiagnostic;
+
+  constructor(code: string, error: unknown) {
+    super(code);
+    this.name = "SanitizedProviderError";
+    this.diagnostic = providerFailureDiagnostic(error);
+  }
 }
 
 export function classifyProviderError(

@@ -22,11 +22,60 @@ describe("provider error classification", () => {
       .toBe("NARRATOR_QUOTA_EXHAUSTED");
   });
 
-  test("director exposes only the sanitized failure class", async () => {
-    const run = vi.fn().mockRejectedValue({ status: 429, code: "insufficient_quota", message: "account details" });
+  test("retains only bounded provider diagnostics for private development", () => {
+    const diagnostic = agents.providerFailureDiagnostic({
+      cause: {
+        status: 400,
+        code: "invalid_function_parameters",
+        type: "invalid_request_error",
+        param: "tools[2].parameters",
+        name: "BadRequestError",
+        requestID: "req_safe_123",
+        message: "secret provider details",
+        headers: { authorization: "secret" },
+      },
+    });
+    expect(diagnostic).toEqual({
+      status: 400,
+      code: "invalid_function_parameters",
+      type: "invalid_request_error",
+      param: "tools[2].parameters",
+      name: "BadRequestError",
+      requestId: "req_safe_123",
+    });
+    expect(JSON.stringify(diagnostic)).not.toContain("secret");
+  });
+
+  test("director preserves safe diagnostics without exposing the provider message", async () => {
+    const run = vi.fn().mockRejectedValue({
+      status: 400, code: "invalid_function_parameters", type: "invalid_request_error",
+      param: "tools[2].parameters", requestID: "req_safe_123", message: "account details",
+    });
+    const director = new agents.OpenAiDirectorAdapter({
+      config: agents.loadAgentConfig({}), sourcePack, runClient: { run }, preserveProviderDiagnostics: true,
+    });
+    const error = await director.propose(directorInput()).catch((failure: unknown) => failure);
+    expect(error).toBeInstanceOf(agents.SanitizedProviderError);
+    expect(error).toMatchObject({
+      message: "DIRECTOR_REQUEST_REJECTED",
+      diagnostic: {
+        status: 400, code: "invalid_function_parameters", type: "invalid_request_error",
+        param: "tools[2].parameters", requestId: "req_safe_123",
+      },
+    });
+    expect(JSON.stringify(error)).not.toContain("account details");
+  });
+
+  test("normal play discards even the bounded diagnostic", async () => {
+    const run = vi.fn().mockRejectedValue({
+      status: 400, param: "tools[2].parameters", requestID: "req_safe_123", message: "account details",
+    });
     const director = new agents.OpenAiDirectorAdapter({
       config: agents.loadAgentConfig({}), sourcePack, runClient: { run },
     });
-    await expect(director.propose(directorInput())).rejects.toThrow(/^DIRECTOR_QUOTA_EXHAUSTED$/);
+    const error = await director.propose(directorInput()).catch((failure: unknown) => failure);
+    expect(error).toBeInstanceOf(agents.SanitizedProviderError);
+    expect(error).toMatchObject({ message: "DIRECTOR_REQUEST_REJECTED", diagnostic: {} });
+    expect(JSON.stringify(error)).not.toContain("req_safe_123");
   });
 });

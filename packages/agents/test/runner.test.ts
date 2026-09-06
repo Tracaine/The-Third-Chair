@@ -103,7 +103,7 @@ describe("AgentsSdkRunClient", () => {
     const agent = new Agent<{ turnId: string }>({
       name: "Narrator",
       instructions: "Narrate visible facts.",
-      model: "gpt-5.6-terra",
+      model: "gpt-5.6-sol",
       modelSettings: { reasoning: { effort: "medium" } },
       tools: [],
     });

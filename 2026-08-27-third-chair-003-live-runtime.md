@@ -6,7 +6,7 @@
 
 **Architecture:** Wrap the OpenAI Agents SDK behind the existing `DirectorPort` and `NarratorPort`. Build each run from a fresh, budgeted context; give the Director four private read-only retrieval tools plus one idempotent stakes-and-dice tool; require Zod structured output; validate and optionally repair once; then give a separate tool-less Narrator only the visible candidate. Normal play disables SDK tracing.
 
-**Tech Stack:** Node.js 24 LTS, TypeScript, Zod 4, Vitest, `@openai/agents`, GPT-5.6 Sol, GPT-5.6 Terra, and the CHAIR-001/002 packages.
+**Tech Stack:** Node.js 24 LTS, TypeScript, Zod 4, Vitest, `@openai/agents`, GPT-5.6 Sol, and the CHAIR-001/002 packages.
 
 **Spec:** `docs/superpowers/specs/2026-08-27-third-chair-design.md`
 
@@ -16,7 +16,7 @@
 - Before any command that calls OpenAI, use `openai-developers:openai-platform-api-key`; never print, inspect, persist, or commit the key.
 - The Director and Narrator are fresh per decision and receive no Agents SDK session.
 - The Director model is `gpt-5.6-sol`, reasoning `high`, text verbosity `low`, and parallel tool calls disabled.
-- The Narrator model is `gpt-5.6-terra`, reasoning `medium`, text verbosity `medium`, and has zero tools.
+- The Narrator model is `gpt-5.6-sol`, reasoning `medium`, text verbosity `medium`, and has zero tools.
 - Model IDs and settings are configuration, validated on startup, and recorded in every turn ledger.
 - Normal play disables tracing with `OPENAI_AGENTS_DISABLE_TRACING=1` and `setTracingDisabled(true)`.
 - Private development tracing is opt-in and uses `traceIncludeSensitiveData: false`; local turn logs still omit raw prompts, hidden state, and source passages.
@@ -53,7 +53,7 @@ Open and retain the current pages for Agents SDK quickstart, agents, tools, sche
 expect(loadAgentConfig({})).toMatchObject({
   directorModel: "gpt-5.6-sol",
   directorReasoning: "high",
-  narratorModel: "gpt-5.6-terra",
+  narratorModel: "gpt-5.6-sol",
   narratorReasoning: "medium",
   traceMode: "off",
 });
@@ -79,7 +79,7 @@ Use this exact schema:
 export const AgentConfigSchema = z.object({
   directorModel: z.string().default("gpt-5.6-sol"),
   directorReasoning: z.enum(["low", "medium", "high", "xhigh", "max"]).default("high"),
-  narratorModel: z.string().default("gpt-5.6-terra"),
+  narratorModel: z.literal("gpt-5.6-sol").default("gpt-5.6-sol"),
   narratorReasoning: z.enum(["low", "medium", "high", "xhigh", "max"]).default("medium"),
   traceMode: z.enum(["off", "private_dev"]).default("off"),
   directorTimeoutMs: z.number().int().min(1_000).max(120_000).default(60_000),
@@ -391,7 +391,7 @@ Run: `npm test -- packages/agents/test/narrator*.test.ts packages/engine/test/tu
 
 - [ ] **Step 4: Implement agent and validator**
 
-Create an `Agent` with `NarrationSchema` as `outputType`, configured Terra model/settings, and no tools. Validate IDs structurally, compare all numeric roll/resource facts to input, scan for forbidden sentinels from the test harness, and reject quoted player lines not present verbatim in locked intents. Run one Narrator retry against the identical visible candidate.
+Create an `Agent` with `NarrationSchema` as `outputType`, configured Sol model/settings, and no tools. Validate IDs structurally, compare all numeric roll/resource facts to input, scan for forbidden sentinels from the test harness, and reject quoted player lines not present verbatim in locked intents. Run one Narrator retry against the identical visible candidate.
 
 - [ ] **Step 5: Implement explicit deterministic fallback**
 

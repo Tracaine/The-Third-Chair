@@ -70,9 +70,9 @@ describe("Narrator context sentinel boundary", () => {
       { kind: "ADVANCE_CLOCK", clockId: "test_clock", amount: 999 },
       { kind: "SET_NPC_ATTITUDE", npcId: "test_npc", status: "SENTINEL_NPC" },
       { kind: "SET_QUEST_STATUS", questId: "test_quest", status: "SENTINEL_QUEST" },
-      { kind: "SET_COMBAT", combat: { id: "test_combat", hidden: "SENTINEL_UNKNOWN" } },
+      { kind: "SET_COMBAT", combat: { id: "test_combat", hidden: "SENTINEL_UNKNOWN" } as unknown as NonNullable<typeof after.combat> },
       { kind: "ADVANCE_INITIATIVE" },
-      { kind: "SET_DECISION", decision: { id: after.currentDecision.id, hidden: "SENTINEL_DECISION" } },
+      { kind: "SET_DECISION", decision: { id: after.currentDecision.id, hidden: "SENTINEL_DECISION" } as unknown as typeof after.currentDecision },
       { kind: "SET_FLAG", flag: { id: "test_hidden_flag", audience: "DIRECTOR", key: "secret", text: "SENTINEL_FLAG" } },
       { kind: "SET_HP", actorId: "test_hidden_actor", value: 999 },
       { kind: "SPEND_RESOURCE", actorId: "test_actor_bill", resourceId: "test_hidden_resource", amount: 999 },
@@ -143,12 +143,12 @@ describe("Narrator context sentinel boundary", () => {
       {
         id: "test_operation_unknown_combat", kind: "SET_COMBAT", audience: "PUBLIC",
         reason: "SENTINEL_COMBAT_REASON", cause: { type: "SYSTEM", systemRule: "INITIATIVE" },
-        combat: { hidden: "SENTINEL_UNKNOWN_COMBAT_PAYLOAD" },
+        combat: { hidden: "SENTINEL_UNKNOWN_COMBAT_PAYLOAD" } as unknown as NonNullable<typeof after.combat>,
       },
       {
         id: "test_operation_unknown_decision", kind: "SET_DECISION", audience: "DIRECTOR",
         reason: "SENTINEL_DIRECTOR_OPERATION", cause: { type: "SYSTEM", systemRule: "CHECKPOINT" },
-        decision: { hidden: "SENTINEL_UNKNOWN_DECISION_PAYLOAD" },
+        decision: { hidden: "SENTINEL_UNKNOWN_DECISION_PAYLOAD" } as unknown as typeof after.currentDecision,
       },
     ];
     const rawInput: NarratorBuildInput & { rawSourceText: string } = {

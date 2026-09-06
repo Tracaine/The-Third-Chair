@@ -136,7 +136,7 @@ flowchart TD
 
 TypeScript is used across runtime, MCP, contracts, and widget so schemas can be shared. Source extraction is orchestrated by TypeScript scripts that call the installed PDF/OCR command-line tools; those tools are not runtime dependencies during play.
 
-The default Director model is `gpt-5.6-sol` with high reasoning effort. The default Narrator model is `gpt-5.6-terra` with medium reasoning effort. Both IDs and effort settings are explicit deployment configuration and are recorded on every turn. The Director gets frontier reasoning where adjudication and tool use matter; the bounded Narrator uses the faster tier to protect live-turn latency. A deliberate maximum-quality profile may set both roles to `gpt-5.6-sol` with max reasoning without changing any contract.
+Both the Director and Narrator use `gpt-5.6-sol`. The Director uses high reasoning effort and the Narrator uses medium reasoning effort. The fixed model ID and effort settings are recorded on every turn; changing either role to another model fails configuration rather than opening an alternate runtime path.
 
 ### Storage split
 
@@ -758,7 +758,7 @@ The design follows current official OpenAI documentation:
 - [Agents SDK](https://developers.openai.com/api/docs/guides/agents) and [orchestration](https://developers.openai.com/api/docs/guides/agents/orchestration) for bounded specialist roles and tool ownership.
 - [Running agents](https://developers.openai.com/api/docs/guides/agents/running-agents) and [results and state](https://developers.openai.com/api/docs/guides/agents/results) for explicit state strategy, resumable runs, and next-turn surfaces.
 - [Guardrails and human review](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals) for validation at the tool boundary and resumable interruptions.
-- [GPT-5.6 Sol](https://developers.openai.com/api/docs/models/gpt-5.6-sol) and [GPT-5.6 Terra](https://developers.openai.com/api/docs/models/gpt-5.6-terra) for the default Director and Narrator model profiles.
+- [GPT-5.6 Sol](https://developers.openai.com/api/docs/models/gpt-5.6-sol) for both model roles.
 
 ---
 

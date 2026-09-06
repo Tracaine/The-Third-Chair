@@ -7,13 +7,13 @@ import { directorInput, proposal, sourcePack, usage } from "./director-fixtures.
 
 describe("Director adapter", () => {
   test("runs a fresh bounded structured agent with only supplied tools and local capabilities", async () => {
-    const config = agents.loadAgentConfig({ DIRECTOR_MODEL: "configured-director", DIRECTOR_REASONING: "medium" });
+    const config = agents.loadAgentConfig({ DIRECTOR_MODEL: "gpt-5.6-sol", DIRECTOR_REASONING: "medium" });
     const tools = agents.createRetrievalTools();
     const seen: unknown[] = [];
     const run: AgentRunClient["run"] = async (agent, input, options) => {
       seen.push(agent);
       expect(agent.name).toBe("Third Chair Director");
-      expect(agent.model).toBe("configured-director");
+      expect(agent.model).toBe("gpt-5.6-sol");
       expect(agent.modelSettings).toEqual({ reasoning: { effort: "medium" }, text: { verbosity: "low" }, parallelToolCalls: false });
       expect(agent.tools).toEqual(tools);
       expect(agent.outputType).toBe(TurnProposalSchema);
@@ -35,7 +35,7 @@ describe("Director adapter", () => {
       expect(input).not.toContain("SENTINEL");
       expect(input).not.toContain("sourcePack");
       expect(input).not.toContain("runtime");
-      expect(input).not.toContain("configured-director");
+      expect(input).not.toContain("gpt-5.6-sol");
       options.onToolInvoked?.("search_rules_internal");
       options.onToolInvoked?.("SENTINEL_FAKE_TOOL");
       return { finalOutput: proposal(), usage };
@@ -48,7 +48,7 @@ describe("Director adapter", () => {
     expect(await adapter.propose(input)).toEqual(proposal());
     expect(seen[0]).not.toBe(seen[1]);
     expect(onMetrics.mock.calls[0]?.[0]).toEqual({
-      role: "director", profile: { model: "configured-director", reasoning: "medium", verbosity: "low" },
+      role: "director", profile: { model: "gpt-5.6-sol", reasoning: "medium", verbosity: "low" },
       usage, elapsedMs: expect.any(Number), invokedToolNames: ["search_rules_internal"],
     });
   });
