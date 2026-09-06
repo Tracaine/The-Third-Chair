@@ -34,18 +34,18 @@ const actor = (
   resources,
 });
 
-const bill = actor("actor_bill", "BILL", "Bill", 24, 17, [], [
-  { id: "bill_second_wind", name: "Second Wind", current: 1, maximum: 1 },
+const bill = actor("test_actor_bill", "BILL", "Bill", 24, 17, [], [
+  { id: "test_bill_second_wind", name: "Second Wind", current: 1, maximum: 1 },
 ]);
-const raven = actor("actor_raven", "RAVEN", "Raven", 16, 15, ["Inspired"], [
-  { id: "raven_spell_slots", name: "Spell slots", current: 2, maximum: 3 },
-  { id: "raven_luck", name: "Mischief", current: 1, maximum: 2 },
+const raven = actor("test_actor_raven", "RAVEN", "Raven", 16, 15, ["Inspired"], [
+  { id: "test_raven_spell_slots", name: "Spell slots", current: 2, maximum: 3 },
+  { id: "test_raven_luck", name: "Mischief", current: 1, maximum: 2 },
 ]);
 
 const visibleCheck: VisibleCheck = {
-  id: "check_ledger",
-  planId: "plan_cellar",
-  actorId: "actor_raven",
+  id: "test_check_ledger",
+  planId: "test_plan_cellar",
+  actorId: "test_actor_raven",
   checkKind: "Investigation",
   key: "investigation",
   naturalDice: [14],
@@ -66,47 +66,47 @@ const visibleCheck: VisibleCheck = {
 };
 
 const baseView: PlayerView = {
-  campaignId: "campaign_lantern",
+  campaignId: "test_campaign_lantern",
   stateVersion: 12,
   worldDate: { yearDr: 1375, month: "Mirtul", day: 14 },
   location: {
-    id: "location_lantern_cellar",
+    id: "test_location_lantern_cellar",
     name: "The Lantern Cellar",
     status: "Infiltrated",
     facts: [
-      { id: "objective_cellar", kind: "Objective", text: "Find who marked the smuggler's ledger." },
-      { id: "pressure_stairs", kind: "Pressure", text: "Footsteps are descending the stairs." },
+      { id: "test_objective_cellar", kind: "Objective", text: "Find who marked the smuggler's ledger." },
+      { id: "test_pressure_stairs", kind: "Pressure", text: "Footsteps are descending the stairs." },
     ],
   },
-  sceneId: "scene_cellar_ledger",
+  sceneId: "test_scene_cellar_ledger",
   actors: [bill, raven],
   inventory: [],
   npcs: [],
   factions: [],
   facts: [
-    { id: "clue_wax", kind: "Clue", text: "The violet wax matches House Veyra." },
-    { id: "clue_tide", kind: "Clue", text: "Every payment lands at low tide." },
+    { id: "test_clue_wax", kind: "Clue", text: "The violet wax matches House Veyra." },
+    { id: "test_clue_tide", kind: "Clue", text: "Every payment lands at low tide." },
   ],
   events: [
-    { id: "event_ledger", kind: "Discovery", text: "Raven decoded the ledger's margin marks." },
+    { id: "test_event_ledger", kind: "Discovery", text: "Raven decoded the ledger's margin marks." },
   ],
   clocks: [],
   openThreads: [
     {
-      id: "thread_watch",
+      id: "test_thread_watch",
       name: "Who is paying the dock watch?",
       status: "Open",
-      facts: [{ id: "thread_watch_fact", kind: "Lead", text: "Ask at the Bent Nail after midnight." }],
+      facts: [{ id: "test_thread_watch_fact", kind: "Lead", text: "Ask at the Bent Nail after midnight." }],
     },
   ],
   combat: null,
   currentDecision: {
-    id: "decision_cellar_escape",
+    id: "test_decision_cellar_escape",
     stateVersion: 12,
     mode: "EXPLORATION",
     owner: "BILL",
     situation: "The cellar door is the only quiet way out.",
-    eligibleActorIds: ["actor_bill"],
+    eligibleActorIds: ["test_actor_bill"],
     constraints: "The approaching group is less than a minute away.",
     requiredInput: "What do you do before the footsteps reach the cellar?",
     legalOptions: [],
@@ -119,11 +119,12 @@ export const explorationFixture: TableViewModel & {
   readonly hiddenFixtureFields: readonly string[];
 } = {
   playerViewId: "a".repeat(64),
+  audience: "BILL",
   playerView: baseView,
   visibleChecks: [visibleCheck],
-  lastMutationId: "turn_0012",
+  lastMutationId: "test_turn_0012",
   serverStatus: "READY",
-  actorNames: { actor_bill: "Bill", actor_raven: "Raven" },
+  actorNames: { test_actor_bill: "Bill", test_actor_raven: "Raven" },
   hiddenFixtureFields: ["The patron is Lady Sablethorn."],
 };
 
@@ -133,49 +134,49 @@ export const combatFixture: typeof explorationFixture = {
     ...baseView,
     stateVersion: 18,
     location: {
-      id: "location_docks",
+      id: "test_location_docks",
       name: "Stormhaven Docks",
       status: "Contested",
       facts: [
-        { id: "objective_crane", kind: "Objective", text: "Keep the ledger out of the cutthroats' hands." },
-        { id: "pressure_fire", kind: "Pressure", text: "Fire is crawling toward the mooring lines." },
+        { id: "test_objective_crane", kind: "Objective", text: "Keep the ledger out of the cutthroats' hands." },
+        { id: "test_pressure_fire", kind: "Pressure", text: "Fire is crawling toward the mooring lines." },
       ],
     },
     npcs: [
       {
-        id: "npc_cutthroat",
+        id: "test_npc_cutthroat",
         name: "Dockside Cutthroat",
         status: "Hostile",
-        facts: [{ id: "npc_cutthroat_fact", kind: "Visible", text: "Bloodied, carrying a hooked blade" }],
+        facts: [{ id: "test_npc_cutthroat_fact", kind: "Visible", text: "Bloodied, carrying a hooked blade" }],
       },
     ],
     combat: {
-      id: "combat_docks",
+      id: "test_combat_docks",
       round: 3,
-      currentActorId: "actor_raven",
-      initiativeOrder: ["actor_raven", "npc_cutthroat", "actor_bill"],
+      currentActorId: "test_actor_raven",
+      initiativeOrder: ["test_actor_raven", "test_npc_cutthroat", "test_actor_bill"],
       facts: [
-        { id: "terrain_cart", kind: "Terrain", text: "Overturned fish cart" },
-        { id: "hazard_oil", kind: "Hazard", text: "Burning lamp oil" },
-        { id: "interactable_crane", kind: "Interactable", text: "Cargo crane release" },
+        { id: "test_terrain_cart", kind: "Terrain", text: "Overturned fish cart" },
+        { id: "test_hazard_oil", kind: "Hazard", text: "Burning lamp oil" },
+        { id: "test_interactable_crane", kind: "Interactable", text: "Cargo crane release" },
       ],
     },
     currentDecision: {
-      id: "decision_raven_combat",
+      id: "test_decision_raven_combat",
       stateVersion: 18,
       mode: "COMBAT",
       owner: "RAVEN",
       situation: "The cutthroat has Bill pinned against the pier rail.",
-      eligibleActorIds: ["actor_raven"],
+      eligibleActorIds: ["test_actor_raven"],
       constraints: "The burning oil blocks the direct path.",
       requiredInput: "Raven chooses her action.",
       legalOptions: [],
     },
   },
   actorNames: {
-    actor_bill: "Bill",
-    actor_raven: "Raven",
-    npc_cutthroat: "Dockside Cutthroat",
+    test_actor_bill: "Bill",
+    test_actor_raven: "Raven",
+    test_npc_cutthroat: "Dockside Cutthroat",
   },
   hiddenFixtureFields: ["Invisible assassin", "The patron is Lady Sablethorn."],
 };

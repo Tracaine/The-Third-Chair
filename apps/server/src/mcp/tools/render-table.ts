@@ -33,7 +33,7 @@ export function renderTable(deps: { campaigns: CampaignRepository }, rawInput: R
   const freshPlayerViewId = computePlayerViewId(campaign.id, campaign.stateVersion, input.audience, campaign.currentStateHash);
   if (freshPlayerViewId !== input.playerViewId) throw new StalePlayerViewError(campaign.stateVersion, freshPlayerViewId);
   const playerView = projectPlayerView(campaign.currentState, input.audience);
-  const payload = { playerViewId: freshPlayerViewId, playerView, visibleChecks: [], serverStatus: "READY" as const };
+  const payload = { playerViewId: freshPlayerViewId, audience: input.audience, playerView, visibleChecks: [], serverStatus: "READY" as const };
   return toMcpResult(TableViewPayloadSchema, payload, `Raven's Table is ready at state version ${campaign.stateVersion}.`, {
     ui: { resourceUri: TABLE_WIDGET_URI },
     "openai/outputTemplate": TABLE_WIDGET_URI,

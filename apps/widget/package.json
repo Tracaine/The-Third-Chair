@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit --pretty false"
   },
   "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.7.5",
     "@third-chair/contracts": "*",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"

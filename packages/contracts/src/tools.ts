@@ -79,6 +79,7 @@ export const VisibleCheckSchema = CheckResolutionSchema.extend({
 }).strict();
 export const TableViewPayloadSchema = z.object({
   playerViewId: PlayerViewIdSchema,
+  audience: PlayerSeatSchema,
   playerView: PlayerViewSchema,
   visibleChecks: z.array(VisibleCheckSchema).max(6),
   lastMutationId: PersistedIdSchema.optional(),

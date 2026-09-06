@@ -1,15 +1,12 @@
-import type { CheckResolution, PlayerView, TableViewPayload } from "@third-chair/contracts";
+import type { PlayerView, TableViewPayload } from "@third-chair/contracts";
 
-export interface VisibleCheck extends CheckResolution {
-  readonly consequence?: string;
-}
-
-export interface TableViewModel extends Omit<TableViewPayload, "visibleChecks"> {
-  readonly visibleChecks: readonly VisibleCheck[];
-}
+export type VisibleCheck = TableViewPayload["visibleChecks"][number];
+export type TableViewModel = TableViewPayload;
 
 export interface WidgetPreferences {
-  readonly theme: "system" | "light" | "dark";
+  readonly expandedPanelIds: readonly string[];
+  readonly selectedTab: "story" | "party";
+  readonly reducedMotion: boolean;
 }
 
 export type EntityFact = PlayerView["facts"][number];

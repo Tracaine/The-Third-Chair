@@ -18,7 +18,7 @@ export default defineConfig({
           name: "widget",
           root: "./apps/widget",
           environment: "jsdom",
-          include: ["src/**/*.test.tsx"],
+          include: ["src/**/*.test.{ts,tsx}"],
           setupFiles: ["./src/test/setup.ts"],
         },
       },
