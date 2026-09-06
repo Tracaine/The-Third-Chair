@@ -1,10 +1,10 @@
 # CHAIR-003 implementation checkpoint
 
-Checkpoint date: 2026-09-05
+Checkpoint date: 2026-09-06
 
 Branch: `chair-003-live-runtime`
 
-This is an in-progress recovery checkpoint, not the CHAIR-003 gate. Do not tag it as complete.
+CHAIR-003 implementation is complete. Final gate evidence is recorded in `docs/operations/chair-003-gate.md`.
 
 ## Completed
 
@@ -20,9 +20,9 @@ Task 4's final verified local commit is `bc2e9d452457468c252ebfa361a4b8d7479e530
 
 Focused Task 4 verification passed: 68 Director tests, all six workspace typechecks, 3 compatibility tests, and `git diff --check`. The final scoped re-review was clean.
 
-## Current gate point
+## Final gate point
 
-Task 8's server wiring, four-case evaluator, and offline gate are complete. The final real-model run is pending because this workspace intentionally has no `OPENAI_API_KEY`. Do not tag CHAIR-003 complete until `npm run eval` passes on Bill's locally configured machine and the redacted results are recorded.
+Task 8's server wiring, four-case evaluator, offline gate, and real-model gate are complete. All four lean private-runtime cases passed together with GPT-5.6 Sol on 2026-09-06. The final annotated tag and private checkpoint package may now be created.
 
 ## Lean private-runtime gate
 
