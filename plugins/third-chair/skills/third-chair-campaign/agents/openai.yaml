@@ -1,0 +1,6 @@
+interface:
+  display_name: "Third Chair Campaign"
+  short_description: "Resume and manage persistent Third Chair campaigns"
+  default_prompt: "Show my Third Chair campaigns."
+policy:
+  allow_implicit_invocation: true

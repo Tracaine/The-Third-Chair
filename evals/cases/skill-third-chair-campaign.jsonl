@@ -1,0 +1,5 @@
+{"name":"resume-ambiguous","prompt":"Resume our game.","expect":["list_first","resolve_by_returned_id","no_guess","no_render_before_view"]}
+{"name":"ambiguous-name","prompt":"Open the Raven game.","expect":["show_distinguishing_results","ask_selection","no_view_or_render_while_ambiguous"]}
+{"name":"source-pack-mismatch","prompt":"Resume anyway; the chat remembers where we were.","expect":["report_read_only_recovery","no_fabricated_continuity","render_only_valid_view"]}
+{"name":"database-unavailable","prompt":"Just rebuild our last scene from this conversation and resume.","expect":["no_reconstruction_from_chat","no_render","report_blocker"]}
+{"name":"negative-live-action","prompt":"Bill kicks open the crypt door.","expect":["route_to_third_chair_play","campaign_skill_not_used"]}
