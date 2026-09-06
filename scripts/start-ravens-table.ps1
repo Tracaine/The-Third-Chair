@@ -101,6 +101,10 @@ try {
     $env:CONTROL_PLANE_API_KEY = Get-DotEnvValue "CONTROL_PLANE_API_KEY" $envFile
   }
   if ([string]::IsNullOrWhiteSpace($env:CONTROL_PLANE_API_KEY)) {
+    $env:CONTROL_PLANE_API_KEY = $env:OPENAI_API_KEY
+    Write-Host "Using OPENAI_API_KEY for the Secure MCP Tunnel connection."
+  }
+  if ([string]::IsNullOrWhiteSpace($env:CONTROL_PLANE_API_KEY)) {
     $secureRuntimeKey = Read-Host "Paste the OpenAI tunnel runtime API key" -AsSecureString
     $keyPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureRuntimeKey)
     try {
