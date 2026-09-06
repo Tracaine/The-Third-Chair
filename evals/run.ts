@@ -1,12 +1,13 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { WorldStateSchema, type AdvanceGameCommand, type SourcePackService } from "@third-chair/contracts";
+import { type AdvanceGameCommand, type SourcePackService } from "@third-chair/contracts";
 import { loadAgentConfig, OpenAiDirectorAdapter, OpenAiNarratorAdapter } from "@third-chair/agents";
 import { createTurnEngine, FailureInjector, type NarratorPort, sha256Json } from "@third-chair/engine";
 import { createCampaignRepository, createTurnRepository, openCampaignDatabase, runMigrationsWithBackup } from "@third-chair/storage";
 import { createSqliteSourcePackService, openSourcePackReadOnly } from "@third-chair/source-pack";
 import { gradeChair003, type EvalExpectation } from "./graders.js";
+import { stateForCase } from "./fixture-state.js";
 
 interface EvalCase { name: string; mode: "NORMAL" | "FAIL_NARRATOR" | "RESTART_AFTER_RESOLVED"; declaredAction: string; desiredOutcome: string; approach: string; expectation: EvalExpectation; }
 interface RedactedResult { name: string; passed: boolean; elapsedMs: number; finalKind: string; rollCount: number; errorCode?: string; }
@@ -20,16 +21,6 @@ function cases(): EvalCase[] {
     .map((line) => JSON.parse(line) as EvalCase);
 }
 
-function stateFor(name: string) {
-  const base = JSON.parse(readFileSync(new URL("./fixtures/chair-003-state.json", import.meta.url), "utf8")) as Record<string, unknown>;
-  const safe = name.replaceAll("-", "_");
-  const state = structuredClone(base) as any;
-  state.metadata.campaignId = `test_eval_campaign_${safe}`;
-  state.metadata.sceneId = `test_eval_scene_${safe}`;
-  state.currentDecision.id = `test_eval_decision_${safe}`;
-  return WorldStateSchema.parse(state);
-}
-
 async function runCase(testCase: EvalCase, sourcePack: SourcePackService): Promise<RedactedResult> {
   const started = performance.now();
   const directory = mkdtempSync(join(tmpdir(), "third-chair-eval-"));
@@ -37,7 +28,7 @@ async function runCase(testCase: EvalCase, sourcePack: SourcePackService): Promi
   let db: ReturnType<typeof openCampaignDatabase> | null = null;
   try {
     runMigrationsWithBackup(path); db = openCampaignDatabase(path);
-    const state = stateFor(testCase.name);
+    const state = stateForCase(testCase.name);
     const campaigns = createCampaignRepository(db); const turns = createTurnRepository(db);
     campaigns.createCampaign({ id: state.metadata.campaignId, ownerId: "local", name: testCase.name,
       sourcePackHash: sourcePack.manifest().sourcePackManifestHash, rngSeed: new Uint8Array(32).fill(7),
@@ -95,7 +86,11 @@ const sourceDb = openSourcePackReadOnly(resolve(process.env.THIRD_CHAIR_SOURCE_P
 try {
   const sourcePack = createSqliteSourcePackService(sourceDb);
   const results: RedactedResult[] = [];
-  for (const testCase of cases()) results.push(await runCase(testCase, sourcePack));
+  for (const testCase of cases()) {
+    const result = await runCase(testCase, sourcePack);
+    results.push(result);
+    if (!result.passed) break;
+  }
   mkdirSync(resolve("evals/results"), { recursive: true });
   writeFileSync(resolve("evals/results/latest.json"), `${JSON.stringify({ runAt: new Date().toISOString(), results }, null, 2)}\n`);
   process.stdout.write(`${JSON.stringify(results, null, 2)}\n`);

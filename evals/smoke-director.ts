@@ -1,9 +1,7 @@
-import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   ActorIntentSchema,
   ResolutionPlanSchema,
-  WorldStateSchema,
   type ResolutionPlan,
 } from "@third-chair/contracts";
 import {
@@ -13,15 +11,14 @@ import {
 } from "@third-chair/agents";
 import { resolvePlan } from "@third-chair/engine";
 import { createSqliteSourcePackService, openSourcePackReadOnly } from "@third-chair/source-pack";
+import { stateForCase } from "./fixture-state.js";
 
 if (process.env.NODE_ENV !== "development" || process.env.THIRD_CHAIR_PRIVATE_DEV !== "1") {
   throw new Error("DIRECTOR_SMOKE_REQUIRES_PRIVATE_DEV");
 }
 if (!process.env.OPENAI_API_KEY) throw new Error("OPENAI_API_KEY_REQUIRED");
 
-const state = WorldStateSchema.parse(JSON.parse(readFileSync(
-  new URL("./fixtures/chair-003-state.json", import.meta.url), "utf8",
-)));
+const state = stateForCase("no-roll-safe-action");
 const intent = ActorIntentSchema.parse({
   seat: "BILL",
   actorId: "test_actor_bill",
@@ -41,6 +38,7 @@ try {
   const config = loadAgentConfig(process.env);
   let lockedPlan: ResolutionPlan | null = null;
   let lockedResult: ReturnType<typeof resolvePlan> | null = null;
+  const resolutionEvidence = { lockCount: 0 };
   const metrics: { requests: number; toolNames: readonly string[] } = { requests: 0, toolNames: [] };
   const director = new OpenAiDirectorAdapter({
     config,
@@ -61,6 +59,7 @@ try {
       persistedResolutions: [],
       runtime: {
         lockAndResolveChecks: (rawPlan) => {
+          resolutionEvidence.lockCount += 1;
           const plan = ResolutionPlanSchema.parse(rawPlan);
           const reused = lockedPlan !== null;
           if (lockedPlan !== null && JSON.stringify(plan) !== JSON.stringify(lockedPlan)) {
@@ -81,6 +80,7 @@ try {
         },
       },
     });
+    if (resolutionEvidence.lockCount !== 0) throw new Error("DIRECTOR_SMOKE_UNEXPECTED_ROLL");
     process.stdout.write(`${JSON.stringify({
       passed: true,
       code: "DIRECTOR_SMOKE_PASSED",
@@ -88,6 +88,7 @@ try {
       elapsedMs: Math.round(performance.now() - started),
       requests: metrics.requests,
       toolNames: metrics.toolNames,
+      rollCount: 0,
       operationCount: proposal.uncontestedOperations.length + proposal.checkLinkedOperations.length,
     }, null, 2)}\n`);
   } catch (error) {
