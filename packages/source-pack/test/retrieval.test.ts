@@ -19,4 +19,12 @@ describe("source retrieval", () => {
       expect(service.getEntity({ nameOrAlias: "Zhents", asOfDr: 1375 })?.canonicalName).toBe("Zhentarim");
     } finally { db.close(); }
   });
+
+  test("limits known-lore search to explicitly established entity IDs", () => {
+    const { db, service } = createRetrievalFixture();
+    try {
+      const results = service.searchLore({ query: "Dalelands", entityIds: ["zhentarim"] });
+      expect(results.map((result) => result.id)).toEqual(["lore-0"]);
+    } finally { db.close(); }
+  });
 });

@@ -133,6 +133,7 @@ export type CommittedTurn = TurnRecord & {
 export interface CampaignRepository {
   createCampaign(input: CreateCampaignInput): CampaignRecord;
   getCampaign(campaignId: CampaignId): CampaignRecord;
+  listCampaigns(): readonly CampaignRecord[];
 }
 
 export interface TurnRepository {

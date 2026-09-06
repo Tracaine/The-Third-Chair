@@ -3,5 +3,8 @@ export * from "./mcp/result.js";
 export * from "./mcp/server.js";
 export * from "./mcp/tools/get-table-view.js";
 export * from "./mcp/tools/advance-game.js";
+export * from "./mcp/tools/list-campaigns.js";
+export * from "./mcp/tools/answer-rules.js";
+export * from "./mcp/tools/recall-known-lore.js";
 export * from "./http/app.js";
 export * from "./runtime/model-ports.js";

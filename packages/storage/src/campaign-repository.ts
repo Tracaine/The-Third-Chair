@@ -118,6 +118,11 @@ class SqliteCampaignRepository implements CampaignRepository {
     if (!row) throw new Error("CAMPAIGN_NOT_FOUND");
     return parseCampaign(this.db, row);
   }
+
+  listCampaigns(): readonly CampaignRecord[] {
+    const rows = this.db.prepare("SELECT * FROM campaigns ORDER BY updated_at DESC, id").all() as unknown as CampaignRow[];
+    return rows.map((row) => parseCampaign(this.db, row));
+  }
 }
 
 export function createCampaignRepository(db: DatabaseSync): CampaignRepository {

@@ -38,7 +38,12 @@ export class SqliteSourcePackService implements SourcePackService {
 
   searchLore(input: { query: string; region?: string; asOfDr?: number; entityIds?: string[]; limit?: number }): SourceResult[] {
     const limit = Math.min(Math.max(input.limit ?? 8, 0), 8); if (limit === 0) return [];
+    if (input.entityIds !== undefined && input.entityIds.length === 0) return [];
     const asOf = input.asOfDr ?? 1375;
+    const entityIds = [...new Set(input.entityIds ?? [])].slice(0, 50);
+    const entityClause = entityIds.length > 0
+      ? `AND EXISTS (SELECT 1 FROM entity_mentions m WHERE m.chunk_id=c.id AND m.entity_id IN (${entityIds.map(() => "?").join(",")}))`
+      : "";
     const rows = this.db.prepare(`SELECT c.*,d.title FROM source_chunks_fts f
       JOIN source_chunks c ON c.id=f.chunk_id JOIN source_documents d ON d.id=c.document_id
       WHERE source_chunks_fts MATCH ? AND c.content_kind='LORE' AND c.edition IN ('FRCS_3E_LORE_ONLY','FORGOTTEN_REALMS')
@@ -46,8 +51,9 @@ export class SqliteSourcePackService implements SourcePackService {
       AND (? IS NULL OR c.region=?)
       AND c.confidence_status!='LOW_CONFIDENCE'
       AND (c.confidence_status!='REVIEWED' OR EXISTS(SELECT 1 FROM source_reviews r WHERE r.chunk_id=c.id))
+      ${entityClause}
       ORDER BY bm25(source_chunks_fts),c.id LIMIT ?`).all(safeFtsQuery(input.query, this.aliases), asOf, asOf,
-        input.region ?? null, input.region ?? null, limit) as unknown as ChunkRow[];
+        input.region ?? null, input.region ?? null, ...entityIds, limit) as unknown as ChunkRow[];
     return boundPassages(rows.map((row) => ({ kind: "LORE", id: row.id, passage: delimitSourceData(row.text), citation: citation(row),
       confidenceStatus: row.confidence_status })), 8);
   }

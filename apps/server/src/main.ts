@@ -31,5 +31,5 @@ const fakePorts = () => ({
 if (!config.fakeMode && sourcePack === null) throw new Error("SOURCE_PACK_REQUIRED");
 const ports = config.fakeMode ? fakePorts() : createLiveModelPorts(loadAgentConfig(process.env), sourcePack!);
 const engine = createTurnEngine({ campaigns, turns, director: ports.director, narrator: ports.narrator });
-const mcp = createMcpServer({ campaigns, engine });
-createHttpApp(mcp, config.fakeMode, () => createSdkMcpServer({ campaigns, engine })).listen(config.port, config.host, () => process.stdout.write(`Third Chair listening on ${config.host}:${config.port}\n`));
+const mcp = createMcpServer({ campaigns, engine, ...(sourcePack ? { sourcePack } : {}) });
+createHttpApp(mcp, config.fakeMode, () => createSdkMcpServer({ campaigns, engine, ...(sourcePack ? { sourcePack } : {}) })).listen(config.port, config.host, () => process.stdout.write(`Third Chair listening on ${config.host}:${config.port}\n`));
