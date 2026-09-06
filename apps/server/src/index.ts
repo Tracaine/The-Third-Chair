@@ -1,4 +1,5 @@
 export * from "./config.js";
+export * from "./project-paths.js";
 export * from "./mcp/result.js";
 export * from "./mcp/server.js";
 export * from "./mcp/tools/get-table-view.js";

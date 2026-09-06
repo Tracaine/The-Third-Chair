@@ -1,9 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
+import { DEFAULT_WIDGET_BUILD_PATH } from "../project-paths.js";
 
 export const TABLE_WIDGET_URI = "ui://third-chair/table-v1.html";
-export const DEFAULT_WIDGET_BUILD_PATH = resolve(process.cwd(), "apps/widget/dist/index.html");
+export { DEFAULT_WIDGET_BUILD_PATH };
 
 export interface WidgetResource {
   readonly uri: typeof TABLE_WIDGET_URI;

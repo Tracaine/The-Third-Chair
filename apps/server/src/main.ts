@@ -11,12 +11,13 @@ import { createMcpServer, createSdkMcpServer } from "./mcp/server.js";
 import { loadWidgetResource } from "./mcp/widget-resource.js";
 import { createLiveModelPorts } from "./runtime/model-ports.js";
 import { createFakeSourcePack } from "./runtime/fake-source-pack.js";
+import { DEFAULT_CAMPAIGN_DATABASE_PATH, DEFAULT_SOURCE_PACK_DATABASE_PATH } from "./project-paths.js";
 
 const config = readConfig();
-const databasePath = process.env.THIRD_CHAIR_DATABASE ?? "./campaigns.sqlite";
+const databasePath = process.env.THIRD_CHAIR_DATABASE ?? DEFAULT_CAMPAIGN_DATABASE_PATH;
 mkdirSync(dirname(databasePath), { recursive: true }); runMigrationsWithBackup(databasePath);
 const db = openCampaignDatabase(databasePath); const campaigns = createCampaignRepository(db); const turns = createTurnRepository(db);
-const sourcePackDb = config.fakeMode ? null : openSourcePackReadOnly(process.env.THIRD_CHAIR_SOURCE_PACK_DATABASE ?? "./private/source-pack.sqlite");
+const sourcePackDb = config.fakeMode ? null : openSourcePackReadOnly(process.env.THIRD_CHAIR_SOURCE_PACK_DATABASE ?? DEFAULT_SOURCE_PACK_DATABASE_PATH);
 const sourcePack = sourcePackDb === null ? createFakeSourcePack() : createSqliteSourcePackService(sourcePackDb);
 const campaignId = "test_demo_campaign";
 try { campaigns.getCampaign(campaignId); } catch {
