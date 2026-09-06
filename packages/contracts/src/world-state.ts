@@ -2,6 +2,7 @@ import { z } from "zod";
 import { DecisionRequestSchema, type DecisionRequest } from "./decisions.js";
 import { AudienceSchema, PersistedIdSchema, SeatSchema, type PlayerSeat } from "./ids.js";
 import { ActorIntentSchema, type ActorIntent } from "./intents.js";
+import { AbilityNameSchema, SpellSlotStateSchema } from "./characters.js";
 
 const BoundedTextSchema = z.string().trim().max(2_000);
 const BoundedNameSchema = z.string().trim().min(1).max(200);
@@ -50,6 +51,15 @@ export const ActorStateSchema = z.object({
   resources: z.record(PersistedIdSchema, ResourceStateSchema),
   spells: z.array(PersistedIdSchema),
   equipmentIds: z.array(PersistedIdSchema),
+  pronouns: z.string().trim().max(80).optional(),
+  saves: z.record(AbilityNameSchema, z.number().int()).optional(),
+  saveProficiencies: z.array(AbilityNameSchema).optional(),
+  skills: z.record(BoundedNameSchema, z.number().int()).optional(),
+  skillProficiencies: z.array(BoundedNameSchema).optional(),
+  spellSlots: z.record(z.string().regex(/^[1-9]$/), SpellSlotStateSchema).optional(),
+  featureSourceReferenceIds: z.array(z.string().trim().min(1).max(300)).optional(),
+  sourceReferenceIds: z.array(z.string().trim().min(1).max(300)).optional(),
+  characterHook: z.string().trim().max(500).optional(),
   publicNotes: z.array(BoundedTextSchema),
   scopedNotes: z.array(ScopedTextSchema),
 }).strict();
