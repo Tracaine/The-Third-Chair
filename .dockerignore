@@ -1,0 +1,16 @@
+.git
+.env
+Blueprints
+Deployment & Design Revision
+data
+private
+project_sources
+tmp
+node_modules
+**/dist
+coverage
+*.pdf
+*.sqlite*
+*.zip
+*.bak
+*.log

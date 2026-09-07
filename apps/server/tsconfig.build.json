@@ -9,6 +9,8 @@
   "references": [
     { "path": "../../packages/contracts/tsconfig.build.json" },
     { "path": "../../packages/storage/tsconfig.build.json" },
-    { "path": "../../packages/engine/tsconfig.build.json" }
+    { "path": "../../packages/engine/tsconfig.build.json" },
+    { "path": "../../packages/source-pack/tsconfig.build.json" },
+    { "path": "../../packages/agents/tsconfig.build.json" }
   ]
 }

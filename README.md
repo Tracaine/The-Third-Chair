@@ -17,3 +17,7 @@ The launcher builds the widget, starts the live server on loopback, downloads Op
 When the launcher says Raven's Table is ready, it copies the `tunnel_id` to the clipboard. In ChatGPT, enable Developer mode under **Settings → Security and login**, open **Plugins**, select the plus button, choose **Tunnel** under Connection, and select the tunnel or paste its ID. Create the plugin, review its six discovered tools, and add it to a new conversation to begin.
 
 The MCP server remains bound to loopback. OpenAI Secure MCP Tunnel makes an outbound connection and keeps the server off the public internet. Leave the launcher window open while playing; `Ctrl+C` closes the server and tunnel connection.
+
+## Docker deployment
+
+The private runtime can also run as a non-root Docker service on loopback. See [local deployment](docs/operations/local-deploy.md) for the release command and [recovery](docs/operations/recovery.md) for backup, degraded-mode, and restore procedures.

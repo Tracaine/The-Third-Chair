@@ -1,0 +1,28 @@
+services:
+  third-chair:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: third-chair:0.2.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - "${THIRD_CHAIR_DATA_DIR:-../data}:/app/data"
+      - "${THIRD_CHAIR_SOURCE_PACK_FILE:-../private/source-pack.sqlite}:/app/private/source-pack.sqlite:ro"
+    environment:
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      THIRD_CHAIR_OWNER_ID: "${THIRD_CHAIR_OWNER_ID:-bill-local}"
+      THIRD_CHAIR_FAKE_MODE: "${THIRD_CHAIR_FAKE_MODE:-0}"
+      DIRECTOR_MODEL: "${DIRECTOR_MODEL:-gpt-5.6-sol}"
+      DIRECTOR_REASONING: "${DIRECTOR_REASONING:-high}"
+      NARRATOR_MODEL: "${NARRATOR_MODEL:-gpt-5.6-sol}"
+      NARRATOR_REASONING: "${NARRATOR_REASONING:-medium}"
+      THIRD_CHAIR_TRACE_MODE: "off"
+      OPENAI_AGENTS_DISABLE_TRACING: "1"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/health').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s

@@ -16,7 +16,11 @@ import { exportCampaign, exportCampaignDescriptor, EXPORT_MIME_TYPE } from "./to
 import { EXPORT_RESOURCE_TEMPLATE, loadExportResource } from "./export-resource.js";
 import { loadWidgetResource, TABLE_WIDGET_URI, type WidgetResource } from "./widget-resource.js";
 export interface McpServer { readonly tools: readonly { readonly name: string; readonly description: string; readonly inputSchema: unknown; readonly outputSchema: unknown; readonly annotations: object }[]; invoke(name: string, input: unknown): Promise<unknown>; }
-type ServerDependencies = { campaigns: CampaignRepository; turns: TurnRepository; engine: TurnEngine; checkpoints?: CheckpointRepository; sourcePack?: SourcePackService; campaignCreator?: CampaignBuilder; archives?: CampaignArchiveRepository; exports?: ExportRepository; exportDirectory?: string; resourceOwnerId?: string };
+type ServerDependencies = { campaigns: CampaignRepository; turns: TurnRepository; engine: TurnEngine; checkpoints?: CheckpointRepository; sourcePack?: SourcePackService; campaignCreator?: CampaignBuilder; archives?: CampaignArchiveRepository; exports?: ExportRepository; exportDirectory?: string; resourceOwnerId?: string; mutationGuard?: (toolName: string, input: unknown) => void };
+const MUTATING_TOOLS = new Set(["create_campaign", "advance_game", "create_checkpoint", "rewind_to_checkpoint"]);
+function guardMutation(deps: ServerDependencies, name: string, input: unknown): void {
+  if (MUTATING_TOOLS.has(name)) deps.mutationGuard?.(name, input);
+}
 function requireSourcePack(deps: ServerDependencies): SourcePackService { if (!deps.sourcePack) throw new Error("SOURCE_PACK_REQUIRED"); return deps.sourcePack; }
 function requireCampaignCreator(deps: ServerDependencies): CampaignBuilder { if (!deps.campaignCreator) throw new Error("CAMPAIGN_CREATOR_REQUIRED"); return deps.campaignCreator; }
 function requireCheckpoints(deps: ServerDependencies): CheckpointRepository { if (!deps.checkpoints) throw new Error("CHECKPOINT_REPOSITORY_REQUIRED"); return deps.checkpoints; }
@@ -26,6 +30,7 @@ function exportDependencies(deps: ServerDependencies) {
 }
 export function createMcpServer(deps: ServerDependencies): McpServer {
   return { tools: [listCampaignsDescriptor, createCampaignDescriptor, getTableViewDescriptor, advanceGameDescriptor, answerRulesDescriptor, recallKnownLoreDescriptor, createCheckpointDescriptor, rewindToCheckpointDescriptor, renderTableDescriptor, exportCampaignDescriptor], async invoke(name, input) {
+    guardMutation(deps, name, input);
     if (name === "list_campaigns") return listCampaigns(deps, input as never);
     if (name === "create_campaign") return createCampaign({ campaignCreator: requireCampaignCreator(deps) }, input as never);
     if (name === "get_table_view") return getTableView(deps, input as never);
@@ -44,13 +49,13 @@ export function createMcpServer(deps: ServerDependencies): McpServer {
 export function createSdkMcpServer(deps: ServerDependencies, widgetResource: WidgetResource = loadWidgetResource()): SdkMcpServer {
   const server = new SdkMcpServer({ name: "third-chair", version: "0.2.0" });
   server.registerTool(listCampaignsDescriptor.name, { description: listCampaignsDescriptor.description, inputSchema: listCampaignsDescriptor.inputSchema, outputSchema: listCampaignsDescriptor.outputSchema, annotations: listCampaignsDescriptor.annotations }, async (input) => listCampaigns(deps, input));
-  server.registerTool(createCampaignDescriptor.name, { description: createCampaignDescriptor.description, inputSchema: createCampaignDescriptor.inputSchema, outputSchema: createCampaignDescriptor.outputSchema, annotations: createCampaignDescriptor.annotations }, async (input) => createCampaign({ campaignCreator: requireCampaignCreator(deps) }, input));
+  server.registerTool(createCampaignDescriptor.name, { description: createCampaignDescriptor.description, inputSchema: createCampaignDescriptor.inputSchema, outputSchema: createCampaignDescriptor.outputSchema, annotations: createCampaignDescriptor.annotations }, async (input) => { guardMutation(deps, "create_campaign", input); return createCampaign({ campaignCreator: requireCampaignCreator(deps) }, input); });
   server.registerTool(getTableViewDescriptor.name, { description: getTableViewDescriptor.description, inputSchema: getTableViewDescriptor.inputSchema, outputSchema: getTableViewDescriptor.outputSchema, annotations: getTableViewDescriptor.annotations }, async (input) => getTableView(deps, input));
-  server.registerTool(advanceGameDescriptor.name, { description: advanceGameDescriptor.description, inputSchema: advanceGameDescriptor.inputSchema, outputSchema: advanceGameDescriptor.outputSchema, annotations: advanceGameDescriptor.annotations }, async (input) => advanceGame(deps, input));
+  server.registerTool(advanceGameDescriptor.name, { description: advanceGameDescriptor.description, inputSchema: advanceGameDescriptor.inputSchema, outputSchema: advanceGameDescriptor.outputSchema, annotations: advanceGameDescriptor.annotations }, async (input) => { guardMutation(deps, "advance_game", input); return advanceGame(deps, input); });
   server.registerTool(answerRulesDescriptor.name, { description: answerRulesDescriptor.description, inputSchema: answerRulesDescriptor.inputSchema, outputSchema: answerRulesDescriptor.outputSchema, annotations: answerRulesDescriptor.annotations }, async (input) => answerRules({ ...deps, sourcePack: requireSourcePack(deps) }, input));
   server.registerTool(recallKnownLoreDescriptor.name, { description: recallKnownLoreDescriptor.description, inputSchema: recallKnownLoreDescriptor.inputSchema, outputSchema: recallKnownLoreDescriptor.outputSchema, annotations: recallKnownLoreDescriptor.annotations }, async (input) => recallKnownLore({ ...deps, sourcePack: requireSourcePack(deps) }, input));
-  server.registerTool(createCheckpointDescriptor.name, { description: createCheckpointDescriptor.description, inputSchema: createCheckpointDescriptor.inputSchema, outputSchema: createCheckpointDescriptor.outputSchema, annotations: createCheckpointDescriptor.annotations }, async (input) => createCheckpoint({ checkpoints: requireCheckpoints(deps) }, input));
-  server.registerTool(rewindToCheckpointDescriptor.name, { description: rewindToCheckpointDescriptor.description, inputSchema: rewindToCheckpointDescriptor.inputSchema, outputSchema: rewindToCheckpointDescriptor.outputSchema, annotations: rewindToCheckpointDescriptor.annotations }, async (input) => rewindToCheckpoint({ campaigns: deps.campaigns, checkpoints: requireCheckpoints(deps) }, input));
+  server.registerTool(createCheckpointDescriptor.name, { description: createCheckpointDescriptor.description, inputSchema: createCheckpointDescriptor.inputSchema, outputSchema: createCheckpointDescriptor.outputSchema, annotations: createCheckpointDescriptor.annotations }, async (input) => { guardMutation(deps, "create_checkpoint", input); return createCheckpoint({ checkpoints: requireCheckpoints(deps) }, input); });
+  server.registerTool(rewindToCheckpointDescriptor.name, { description: rewindToCheckpointDescriptor.description, inputSchema: rewindToCheckpointDescriptor.inputSchema, outputSchema: rewindToCheckpointDescriptor.outputSchema, annotations: rewindToCheckpointDescriptor.annotations }, async (input) => { guardMutation(deps, "rewind_to_checkpoint", input); return rewindToCheckpoint({ campaigns: deps.campaigns, checkpoints: requireCheckpoints(deps) }, input); });
   registerAppTool(server, renderTableDescriptor.name, {
     title: renderTableDescriptor.title,
     description: renderTableDescriptor.description,

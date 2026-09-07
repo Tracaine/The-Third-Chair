@@ -11,6 +11,7 @@ export function createHttpApp(
   server: McpServer,
   fakeMode: boolean,
   sdkServerFactory?: SdkMcpServerFactory,
+  readiness: { status: "ready" | "degraded"; recoveryCode?: string } = { status: "ready" },
 ) {
   const app = express();
 
@@ -18,10 +19,11 @@ export function createHttpApp(
 
   app.get("/health", (_request, response) =>
     response.json({
-      status: "ok",
+      status: readiness.status,
       schemaVersion: SCHEMA_VERSION,
       databaseReady: true,
       fakeModelMode: fakeMode,
+      ...(readiness.recoveryCode ? { recoveryCode: readiness.recoveryCode } : {}),
     }),
   );
 

@@ -75,8 +75,8 @@ describe("pre-migration backup and restore", () => {
   it("restores the validated pre-migration image after an injected migration fails", () => {
     const temp = createTempDatabase();
     const failing: SqliteMigration[] = [
-      { version: 2, name: "durable_data", sql: "CREATE TABLE durable_data (value TEXT); INSERT INTO durable_data VALUES ('mutated');" },
-      { version: 3, name: "fail", sql: "INSERT INTO table_that_does_not_exist VALUES (1);" },
+      { version: 4, name: "durable_data", sql: "CREATE TABLE durable_data (value TEXT); INSERT INTO durable_data VALUES ('mutated');" },
+      { version: 5, name: "fail", sql: "INSERT INTO table_that_does_not_exist VALUES (1);" },
     ];
     try {
       temp.db.exec("CREATE TABLE original_data (value TEXT NOT NULL); INSERT INTO original_data VALUES ('original');");
@@ -93,7 +93,9 @@ describe("pre-migration backup and restore", () => {
 
       const restored = openCampaignDatabase(temp.path);
       expect(restored.prepare("SELECT value FROM original_data").get()).toEqual({ value: "original" });
-      expect(restored.prepare("SELECT version FROM schema_migrations ORDER BY version").all()).toEqual([{ version: 1 }]);
+      expect(restored.prepare("SELECT version FROM schema_migrations ORDER BY version").all()).toEqual([
+        { version: 1 }, { version: 2 }, { version: 3 },
+      ]);
       expect(() => restored.prepare("SELECT * FROM durable_data").all()).toThrow();
       restored.close();
     } finally {

@@ -44,6 +44,10 @@ export class MigrationFailure extends Error {
   }
 }
 
+function detachedFailure(error: unknown): Error {
+  return new Error(error instanceof Error ? error.message : "UNKNOWN_MIGRATION_ERROR");
+}
+
 const coreMigration: SqliteMigration = {
   version: 1,
   name: "core",
@@ -205,7 +209,7 @@ function migrateNewDatabase(
   } catch (error) {
     if (db?.isOpen) db.close();
     if (published) clearExactDatabaseFiles(databasePath);
-    throw new MigrationFailure("DATABASE_MIGRATION_FAILED", undefined, error);
+    throw new MigrationFailure("DATABASE_MIGRATION_FAILED", undefined, detachedFailure(error));
   } finally {
     clearExactDatabaseFiles(stagePath);
   }
@@ -242,12 +246,12 @@ export function runMigrationsWithBackup(
         restorePreMigrationBackup(databasePath, backupPath);
       } catch (restoreError) {
         throw new MigrationFailure("DATABASE_MIGRATION_AND_RESTORE_FAILED", backupPath, {
-          migrationError: error,
-          restoreError,
+          migrationError: detachedFailure(error),
+          restoreError: detachedFailure(restoreError),
         });
       }
     }
-    throw new MigrationFailure("DATABASE_MIGRATION_FAILED", backupPath, error);
+    throw new MigrationFailure("DATABASE_MIGRATION_FAILED", backupPath, detachedFailure(error));
   } finally {
     if (db.isOpen) db.close();
   }

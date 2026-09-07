@@ -6,7 +6,7 @@
   "engines": { "node": ">=24 <25" },
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present && node scripts/copy-runtime-assets.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p tsconfig.evals.json",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -14,8 +14,8 @@
     "source-pack": "npm run source-pack --workspace @third-chair/source-pack --",
     "dev:server": "npm run dev --workspace @third-chair/server",
     "dev:widget": "npm run dev --workspace @third-chair/widget",
-    "eval": "node --import tsx evals/run.ts",
-    "eval:director-smoke": "node --import tsx evals/smoke-director.ts",
+    "eval": "node --conditions=development --import tsx evals/run.ts",
+    "eval:director-smoke": "node --conditions=development --import tsx evals/smoke-director.ts",
     "verify:private": "node scripts/verify-private-boundary.mjs",
     "package:plugin": "node scripts/package-plugin.mjs"
   },

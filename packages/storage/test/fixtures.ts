@@ -132,7 +132,12 @@ export function createTempDatabase() {
       db.close();
     },
     cleanup() {
-      rmSync(directory, { recursive: true, force: true });
+      try {
+        rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (process.platform !== "win32" || (code !== "EPERM" && code !== "EBUSY")) throw error;
+      }
     },
   };
 }
