@@ -246,6 +246,9 @@ function validateArchive(archive: Uint8Array, expectedSourcePackManifestHash: st
   }
   validateBranchLineage(branches);
   if (!branchIds.has(manifest.activeBranchId)) throw new Error("SAVESET_ACTIVE_BRANCH_MISSING");
+  if (branches.filter((branch) => branch.parent_branch_id === null).length !== 1) {
+    throw new Error("SAVESET_BRANCH_LINEAGE_INVALID");
+  }
   const activeBranches = branches.filter((branch) => branch.status === "ACTIVE");
   if (activeBranches.length !== 1 || activeBranches[0]!.id !== manifest.activeBranchId) {
     throw new Error("SAVESET_ACTIVE_BRANCH_INVALID");
@@ -255,6 +258,7 @@ function validateArchive(archive: Uint8Array, expectedSourcePackManifestHash: st
   requireUnique(ledger.turns.map((turn) => turn.id), "SAVESET_TURN_DUPLICATE");
   requireUnique(ledger.turns.map((turn) => `${turn.campaign_id}\0${turn.client_request_id}`), "SAVESET_TURN_REQUEST_DUPLICATE");
   const turnIds = new Set<string>();
+  const committedCandidates = new Map<string, { state: z.infer<typeof WorldStateSchema>; hash: string }>();
   for (const turn of ledger.turns) {
     requireBelongs(turn, manifest.campaignId, "SAVESET_TURN_CAMPAIGN_MISMATCH");
     if (!branchIds.has(turn.branch_id)) throw new Error("SAVESET_TURN_IDENTITY_INVALID");
@@ -290,17 +294,41 @@ function validateArchive(archive: Uint8Array, expectedSourcePackManifestHash: st
         || JSON.stringify(candidate.currentDecision) !== JSON.stringify(nextDecision)) {
         throw new Error("SAVESET_COMMITTED_TURN_INVALID");
       }
+      committedCandidates.set(turn.id, { state: candidate, hash: hashStoredState(candidate) });
     } else if (turn.committed_state_version !== null) throw new Error("SAVESET_TURN_COMMIT_VERSION_INVALID");
   }
   for (const branch of branches) {
     if (branch.parent_branch_id === null) {
       if (branch.fork_turn_id !== null) throw new Error("SAVESET_BRANCH_LINEAGE_INVALID");
-    } else if (branch.fork_turn_id === null || !turnIds.has(branch.fork_turn_id)) {
-      throw new Error("SAVESET_BRANCH_LINEAGE_INVALID");
+    } else {
+      const fork = ledger.turns.find((turn) => turn.id === branch.fork_turn_id);
+      if (!fork || fork.kind !== "REWIND" || fork.status !== "COMMITTED" || fork.branch_id !== branch.parent_branch_id) {
+        throw new Error("SAVESET_BRANCH_LINEAGE_INVALID");
+      }
     }
   }
   requireUnique(ledger.turnEvents.map((event) => String(event.sequence)), "SAVESET_TURN_EVENT_DUPLICATE");
   for (const event of ledger.turnEvents) if (!turnIds.has(event.turn_id)) throw new Error("SAVESET_TURN_EVENT_ORPHAN");
+  const committedTurns = ledger.turns.filter((turn) => turn.status === "COMMITTED")
+    .sort((left, right) => left.committed_state_version! - right.committed_state_version!);
+  if (committedTurns.length !== manifest.stateVersion) throw new Error("SAVESET_COMMITTED_STATE_CHAIN_INVALID");
+  let previousHash: string | null = null;
+  for (const [index, turn] of committedTurns.entries()) {
+    const version = index + 1;
+    const candidate = committedCandidates.get(turn.id)!;
+    const events = ledger.turnEvents.filter((event) => event.turn_id === turn.id && event.status === "COMMITTED");
+    if (turn.expected_state_version !== index || turn.committed_state_version !== version
+      || (previousHash !== null && turn.before_state_hash !== previousHash)) {
+      throw new Error("SAVESET_COMMITTED_STATE_CHAIN_INVALID");
+    }
+    if (events.length !== 1 || events[0]!.payload_hash !== candidate.hash) {
+      throw new Error("SAVESET_COMMITTED_TURN_EVENT_INVALID");
+    }
+    previousHash = candidate.hash;
+  }
+  if (previousHash !== (manifest.stateVersion === 0 ? null : manifest.stateHash)) {
+    throw new Error("SAVESET_COMMITTED_STATE_CHAIN_INVALID");
+  }
   if (ledger.activeTurns.length > 1) throw new Error("SAVESET_ACTIVE_TURN_DUPLICATE");
   for (const active of ledger.activeTurns) {
     requireBelongs(active, manifest.campaignId, "SAVESET_ACTIVE_TURN_CAMPAIGN_MISMATCH");
