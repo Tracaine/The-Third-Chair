@@ -9,17 +9,20 @@ import {
 } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
+import { WorldStateSchema } from "@third-chair/contracts";
 import { createPreMigrationBackup, restorePreMigrationBackup } from "./backup.js";
 import {
   checkpointCampaignDatabase,
   openCampaignDatabase,
   verifyDatabase,
 } from "./database.js";
+import { hashStoredState } from "./state-hash.js";
 
 export interface SqliteMigration {
   readonly version: number;
   readonly name: string;
   readonly sql: string;
+  readonly afterApply?: (db: DatabaseSync) => void;
 }
 
 export interface MigrationRunOptions {
@@ -51,6 +54,64 @@ const creationMigration: SqliteMigration = {
   version: 2,
   name: "creation",
   sql: readFileSync(new URL("../migrations/002-creation.sql", import.meta.url), "utf8"),
+};
+
+function backfillCampaignStartCheckpoints(db: DatabaseSync): void {
+  const campaigns = db.prepare(`
+    SELECT id, active_branch_id, state_version, current_state_json,
+           current_state_hash, created_at
+    FROM campaigns ORDER BY id
+  `).all() as unknown as {
+    id: string;
+    active_branch_id: string;
+    state_version: number;
+    current_state_json: string;
+    current_state_hash: string;
+    created_at: string;
+  }[];
+  for (const campaign of campaigns) {
+    const earliest = db.prepare(`
+      SELECT branch_id, expected_state_version AS state_version,
+             before_state_json AS state_json, before_state_hash AS state_hash,
+             created_at
+      FROM turns WHERE campaign_id = ?
+      ORDER BY expected_state_version ASC, created_at ASC, id ASC LIMIT 1
+    `).get(campaign.id) as {
+      branch_id: string;
+      state_version: number;
+      state_json: string;
+      state_hash: string;
+      created_at: string;
+    } | undefined;
+    if (!earliest && campaign.state_version !== 0) throw new Error("CAMPAIGN_START_SNAPSHOT_MISSING");
+    const snapshot = earliest ?? {
+      branch_id: campaign.active_branch_id,
+      state_version: campaign.state_version,
+      state_json: campaign.current_state_json,
+      state_hash: campaign.current_state_hash,
+      created_at: campaign.created_at,
+    };
+    const state = WorldStateSchema.parse(JSON.parse(snapshot.state_json));
+    if (state.metadata.campaignId !== campaign.id || state.metadata.stateVersion !== snapshot.state_version) {
+      throw new Error("CAMPAIGN_START_SNAPSHOT_MISMATCH");
+    }
+    if (hashStoredState(state) !== snapshot.state_hash) throw new Error("CAMPAIGN_START_HASH_MISMATCH");
+    db.prepare(`
+      INSERT INTO checkpoints(
+        id, campaign_id, branch_id, request_id, state_version, label, reason,
+        state_json, state_hash, rng_counter, created_at
+      ) VALUES (?, ?, ?, ?, ?, 'Campaign Start', 'CAMPAIGN_START', ?, ?, ?, ?)
+    `).run(randomUUID(), campaign.id, snapshot.branch_id, `campaign-start:${campaign.id}`,
+      snapshot.state_version, JSON.stringify(state), snapshot.state_hash,
+      state.metadata.rngCounter, snapshot.created_at);
+  }
+}
+
+const betaMigration: SqliteMigration = {
+  version: 3,
+  name: "beta",
+  sql: readFileSync(new URL("../migrations/003-beta.sql", import.meta.url), "utf8"),
+  afterApply: backfillCampaignStartCheckpoints,
 };
 
 function orderedMigrations(migrations: readonly SqliteMigration[]): readonly SqliteMigration[] {
@@ -97,6 +158,7 @@ function applyMigrations(
     const appliedAt = new Date().toISOString();
     for (const migration of migrations) {
       db.exec(migration.sql);
+      migration.afterApply?.(db);
       db.prepare("INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)")
         .run(migration.version, appliedAt);
     }
@@ -156,7 +218,7 @@ export function runMigrationsWithBackup(
   if (databasePath.trim().length === 0 || databasePath === ":memory:") {
     throw new Error("FILE_DATABASE_PATH_REQUIRED");
   }
-  const migrations = orderedMigrations(options.migrations ?? [coreMigration, creationMigration]);
+  const migrations = orderedMigrations(options.migrations ?? [coreMigration, creationMigration, betaMigration]);
   if (!existsSync(databasePath)) return migrateNewDatabase(databasePath, migrations);
 
   let db = openCampaignDatabase(databasePath);

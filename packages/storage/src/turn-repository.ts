@@ -25,9 +25,11 @@ import type {
   TurnRepository,
   TurnStatus,
 } from "./types.js";
+import { insertCheckpointSnapshot } from "./checkpoint-repository.js";
 
 interface TurnRow {
   id: string;
+  kind: "GAME" | "REWIND";
   campaign_id: string;
   branch_id: string;
   client_request_id: string;
@@ -109,6 +111,7 @@ function parseTurn(row: TurnRow): TurnRecord {
   }
   return {
     id: row.id,
+    kind: row.kind,
     campaignId: row.campaign_id,
     branchId: row.branch_id,
     clientRequestId: row.client_request_id,
@@ -456,6 +459,19 @@ class SqliteTurnRepository implements TurnRepository {
       }
       if (JSON.stringify(candidate.currentDecision) !== JSON.stringify(nextDecision)) {
         throw new Error("NEXT_DECISION_MISMATCH");
+      }
+
+      if (input.automaticCheckpoint !== undefined) {
+        insertCheckpointSnapshot(this.db, {
+          ...input.automaticCheckpoint,
+          campaignId: turn.campaignId,
+          branchId: turn.branchId,
+          stateVersion: turn.expectedStateVersion,
+          state: beforeState,
+          stateHash: turn.beforeStateHash,
+          rngCounter: beforeState.metadata.rngCounter,
+          createdAt: committedAt,
+        });
       }
 
       const updatedCampaign = this.db.prepare(`

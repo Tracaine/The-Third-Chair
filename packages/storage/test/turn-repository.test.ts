@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createCampaignRepository,
   createTurnRepository,
+  hashStoredState,
   openCampaignDatabase,
 } from "@third-chair/storage";
 import {
@@ -259,7 +260,7 @@ describe("atomic turn commit", () => {
 
       const campaign = createCampaignRepository(temp.db).getCampaign(seeded.campaignId);
       expect(campaign.stateVersion).toBe(0);
-      expect(campaign.currentStateHash).toBe("state-hash-rollback-0");
+      expect(campaign.currentStateHash).toBe(hashStoredState(seeded.state));
       expect(repo.getTurn(input.turnId)).toMatchObject({ status: "RESOLVED", narration: null });
       expect(temp.db.prepare("SELECT turn_id FROM active_turns").get()).toEqual({ turn_id: input.turnId });
       expect(temp.db.prepare("SELECT count(*) AS count FROM turn_events").get()).toEqual({ count: 0 });

@@ -10,6 +10,85 @@ export type CampaignId = string;
 export type BranchId = string;
 export type TurnId = string;
 export type ClientRequestId = string;
+export type CheckpointId = string;
+
+export type CheckpointReason =
+  | "CAMPAIGN_START"
+  | "NAMED"
+  | "DEATH_RISK"
+  | "IRREVERSIBLE_ALLEGIANCE"
+  | "PERMANENT_RARE_RESOURCE"
+  | "MAJOR_BRANCH_CLOSURE"
+  | "LEVEL_ADVANCEMENT";
+
+export interface CheckpointRecord {
+  readonly id: CheckpointId;
+  readonly campaignId: CampaignId;
+  readonly branchId: BranchId;
+  readonly requestId: string;
+  readonly stateVersion: number;
+  readonly label: string;
+  readonly reason: CheckpointReason;
+  readonly state: WorldState;
+  readonly stateHash: string;
+  readonly rngCounter: number;
+  readonly createdAt: string;
+}
+
+export interface CreateCheckpointSnapshotInput {
+  readonly checkpointId: CheckpointId;
+  readonly campaignId: CampaignId;
+  readonly branchId: BranchId;
+  readonly requestId: string;
+  readonly stateVersion: number;
+  readonly label: string;
+  readonly reason: CheckpointReason;
+  readonly state: WorldState;
+  readonly stateHash: string;
+  readonly rngCounter: number;
+  readonly createdAt: string;
+}
+
+export interface CreateNamedCheckpointInput {
+  readonly checkpointId: CheckpointId;
+  readonly campaignId: CampaignId;
+  readonly requestId: string;
+  readonly expectedStateVersion: number;
+  readonly label: string;
+  readonly createdAt?: string;
+}
+
+export interface CheckpointRepository {
+  createNamed(input: CreateNamedCheckpointInput): CheckpointRecord;
+  get(checkpointId: CheckpointId): CheckpointRecord;
+  list(campaignId: CampaignId): readonly CheckpointRecord[];
+  rewind(input: RewindCheckpointCommitInput): RewindCheckpointRecord;
+}
+
+export interface RewindCheckpointCommitInput {
+  readonly campaignId: CampaignId;
+  readonly checkpointId: CheckpointId;
+  readonly requestId: ClientRequestId;
+  readonly inputHash: string;
+  readonly expectedStateVersion: number;
+  readonly rewindTurnId: TurnId;
+  readonly newBranchId: BranchId;
+  readonly restoredState: WorldState;
+  readonly restoredStateHash: string;
+  readonly nextDecision: DecisionRequest;
+  readonly createdAt?: string;
+}
+
+export interface RewindCheckpointRecord {
+  readonly checkpoint: CheckpointRecord;
+  readonly rewindTurnId: TurnId;
+  readonly abandonedBranchId: BranchId;
+  readonly activeBranchId: BranchId;
+  readonly stateVersion: number;
+  readonly currentState: WorldState;
+  readonly currentStateHash: string;
+  readonly currentDecision: DecisionRequest;
+}
 
 export type CampaignCreationStatus = "PROCESSING" | "COMMITTED" | "FAILED";
 export interface CampaignCreationRequestRecord {
@@ -35,6 +114,7 @@ export type TurnStatus =
   | "AWAITING_INPUT"
   | "COMMITTED"
   | "FAILED";
+export type TurnKind = "GAME" | "REWIND";
 
 export interface CreateCampaignInput {
   readonly id: CampaignId;
@@ -87,6 +167,7 @@ export interface TurnFailure {
 
 export interface TurnRecord {
   readonly id: TurnId;
+  readonly kind: TurnKind;
   readonly campaignId: CampaignId;
   readonly branchId: BranchId;
   readonly clientRequestId: ClientRequestId;
@@ -138,6 +219,12 @@ export interface CommitTurnInput {
   readonly candidateStateHash: string;
   readonly narration: JsonValue;
   readonly nextDecision: DecisionRequest;
+  readonly automaticCheckpoint?: {
+    readonly checkpointId: CheckpointId;
+    readonly requestId: string;
+    readonly label: string;
+    readonly reason: Exclude<CheckpointReason, "CAMPAIGN_START" | "NAMED">;
+  };
   readonly committedAt?: string;
 }
 

@@ -15,3 +15,6 @@ export * from "./creation/catalog.js";
 export * from "./creation/character-builder.js";
 export * from "./creation/validate-character.js";
 export * from "./creation/campaign-builder.js";
+export * from "./checkpoints/policy.js";
+export * from "./checkpoints/create.js";
+export * from "./checkpoints/rewind.js";

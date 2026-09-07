@@ -13,6 +13,7 @@ import {
 } from "@third-chair/contracts";
 import {
   createCampaignRepository,
+  hashStoredState,
   openCampaignDatabase,
   runMigrationsWithBackup,
   type BeginTurnInput,
@@ -150,7 +151,7 @@ export function seedCampaign(
     sourcePackHash: "source-pack-hash",
     rngSeed: new Uint8Array(32).fill(7),
     currentState: state,
-    currentStateHash: `state-hash-${suffix}-0`,
+    currentStateHash: hashStoredState(state),
     rootBranchId,
     rootBranchLabel: "Main",
     createdAt: "2026-08-27T12:00:00.000Z",

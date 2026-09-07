@@ -1,4 +1,5 @@
 import { DecisionRequestSchema, WorldStateSchema } from "@third-chair/contracts";
+import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import type {
   CampaignId,
@@ -7,6 +8,7 @@ import type {
   CampaignStatus,
   CreateCampaignInput,
 } from "./types.js";
+import { insertCheckpointSnapshot } from "./checkpoint-repository.js";
 
 interface CampaignRow {
   id: string;
@@ -82,6 +84,19 @@ export function insertCampaignRows(db: DatabaseSync, input: CreateCampaignInput)
   const branch = db.prepare("SELECT campaign_id FROM branches WHERE id = ?")
     .get(input.rootBranchId) as { campaign_id: string } | undefined;
   if (branch?.campaign_id !== input.id) throw new Error("ACTIVE_BRANCH_OWNERSHIP_MISMATCH");
+  insertCheckpointSnapshot(db, {
+    checkpointId: randomUUID(),
+    campaignId: input.id,
+    branchId: input.rootBranchId,
+    requestId: `campaign-start:${input.id}`,
+    stateVersion: state.metadata.stateVersion,
+    label: "Campaign Start",
+    reason: "CAMPAIGN_START",
+    state,
+    stateHash: input.currentStateHash,
+    rngCounter: state.metadata.rngCounter,
+    createdAt: now,
+  });
 }
 
 class SqliteCampaignRepository implements CampaignRepository {

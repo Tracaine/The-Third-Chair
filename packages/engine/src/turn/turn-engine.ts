@@ -12,9 +12,10 @@ import { deriveDecisionAuthority } from "./decision-policy.js";
 import { finalizeCandidateForCommit } from "./finalize-candidate.js";
 import { InvalidDirectorProposalError, NarrationSchema, type DirectorPort, type DirectorRepairIssue, type NarratorPort } from "./ports.js";
 import { renderTerseNarration } from "./terse-renderer.js";
+import { CheckpointPolicy } from "../checkpoints/policy.js";
 
 export interface AdvanceGameResult { readonly kind: "COMMITTED" | "ACTIVE_SUCCESSOR" | "AWAITING_INPUT" | "RECOVERY_REJECTED"; readonly turn: TurnRecord; readonly view: ReturnType<typeof projectPlayerView>; readonly visibleRolls: readonly CheckResolution[]; readonly narration: unknown; }
-export interface TurnEngineDeps { readonly campaigns: CampaignRepository; readonly turns: TurnRepository; readonly director: DirectorPort; readonly narrator: NarratorPort; readonly newTurnId?: () => string; readonly newRecoveryDecisionId?: () => string; readonly newRecoveryCommandId?: () => string; readonly failureInjector?: { check(stage: string): void }; }
+export interface TurnEngineDeps { readonly campaigns: CampaignRepository; readonly turns: TurnRepository; readonly director: DirectorPort; readonly narrator: NarratorPort; readonly newTurnId?: () => string; readonly newRecoveryDecisionId?: () => string; readonly newRecoveryCommandId?: () => string; readonly newCheckpointId?: () => string; readonly failureInjector?: { check(stage: string): void }; }
 function nextId(): string { return `test_turn_${crypto.randomUUID().replaceAll("-", "_")}`; }
 function nextRecoveryId(): string { return crypto.randomUUID(); }
 function parseResolutions(turn: TurnRecord): readonly CheckResolution[] { return (turn.resolutions ?? []).map((value) => CheckResolutionSchema.parse(value)); }
@@ -47,6 +48,19 @@ function narrationRecoverySituation(error: unknown): string {
 export interface TurnEngine { advanceGame(command: AdvanceGameCommand): Promise<AdvanceGameResult>; }
 export function createTurnEngine(deps: TurnEngineDeps): TurnEngine {
   const mutex = new KeyedMutex();
+  const automaticCheckpoint = (
+    turn: Pick<TurnRecord, "id" | "beforeState">,
+    candidateState: TurnRecord["beforeState"],
+    riskTags: TurnProposal["riskTags"],
+  ) => {
+    const required = CheckpointPolicy.evaluate({ beforeState: turn.beforeState, candidateState, riskTags });
+    return required === null ? undefined : {
+      checkpointId: (deps.newCheckpointId ?? nextRecoveryId)(),
+      requestId: `automatic:${turn.id}`,
+      label: required.label,
+      reason: required.reason,
+    };
+  };
   return { async advanceGame(raw): Promise<AdvanceGameResult> {
     const command = AdvanceGameCommandSchema.parse(raw);
     return mutex.run(command.campaignId, async () => {
@@ -85,8 +99,11 @@ export function createTurnEngine(deps: TurnEngineDeps): TurnEngine {
         }
         if (turn.candidateState === null) throw new Error("TURN_NOT_FINALIZED");
         const narration = renderTerseNarration(turn);
+        if (turn.directorProposal === null) throw new Error("TURN_PROPOSAL_MISSING");
+        const recoveryCheckpoint = automaticCheckpoint(turn, turn.candidateState, turn.directorProposal.riskTags);
         turn = deps.turns.commitTurn({ turnId: turn.id, candidateStateHash: sha256Json(turn.candidateState),
-          narration, nextDecision: turn.candidateState.currentDecision });
+          narration, nextDecision: turn.candidateState.currentDecision,
+          ...(recoveryCheckpoint === undefined ? {} : { automaticCheckpoint: recoveryCheckpoint }) });
         deps.turns.completeRecovery(begun.command.id, "COMMITTED", { kind: "COMMITTED", turnId: turn.id });
         return committedResult();
       }
@@ -258,7 +275,9 @@ export function createTurnEngine(deps: TurnEngineDeps): TurnEngine {
       const expectedResolutions = proposal.narrativeBrief.requiredResolutionIds;
       if (expectedResolutions.some((id) => !narration.mustIncludeResolutionIds.includes(id))) throw new Error("NARRATION_MISSING_RESOLUTION");
       deps.failureInjector?.check("NARRATION");
-      const committed = deps.turns.commitTurn({ turnId: turn.id, candidateStateHash: sha256Json(finalized.candidate), narration, nextDecision: finalized.nextDecision });
+      const requiredCheckpoint = automaticCheckpoint(turn, finalized.candidate, proposal.riskTags);
+      const committed = deps.turns.commitTurn({ turnId: turn.id, candidateStateHash: sha256Json(finalized.candidate), narration, nextDecision: finalized.nextDecision,
+        ...(requiredCheckpoint === undefined ? {} : { automaticCheckpoint: requiredCheckpoint }) });
       const committedCampaign = deps.campaigns.getCampaign(command.campaignId);
       return { kind: "COMMITTED", turn: committed, view: projectPlayerView(committedCampaign.currentState, "RAVEN"), visibleRolls: resolved.filter((roll) => roll.visibility === "PUBLIC"), narration };
     });
