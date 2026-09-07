@@ -17,7 +17,10 @@ export function SceneHeader({ view }: SceneHeaderProps) {
         <span aria-hidden="true">◆</span>
         <span>{view.location.status}</span>
       </div>
-      <h1>{view.location.name}</h1>
+      <div className="scene-header__title">
+        <h1>{view.location.name}</h1>
+        <span className="scene-header__blades" aria-hidden="true">⚔</span>
+      </div>
       <div className="scene-header__brief">
         {objective ? (
           <p><span className="label">Objective</span>{objective.text}</p>

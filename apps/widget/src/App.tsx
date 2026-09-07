@@ -72,7 +72,13 @@ export function App({ view: initialView = explorationFixture, bridge: providedBr
   return (
     <div className="table-shell" data-testid="table-shell" data-update-token={`${view.playerViewId}:${view.lastMutationId ?? "none"}`}>
       <nav className="table-toolbar" aria-label="Table display">
-        <div className="table-brand"><span aria-hidden="true">III</span><strong>Raven's Table</strong></div>
+        <div className="table-brand">
+          <span className="table-brand__sigil" aria-hidden="true">III</span>
+          <span className="table-brand__name">
+            <strong>Raven's Table</strong>
+            <small>A Forgotten Realms campaign</small>
+          </span>
+        </div>
         <button type="button" onClick={() => void refresh()} disabled={!bridge || refreshing}>
           {refreshing ? "Refreshing…" : "Refresh table"}
         </button>
