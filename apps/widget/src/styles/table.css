@@ -5,7 +5,7 @@
 
 .table-toolbar,
 .table-shell > main,
-.recovery-strip {
+.table-footer {
   width: min(1180px, calc(100% - 40px));
   margin-inline: auto;
 }
@@ -127,6 +127,24 @@
 .clue-grid li strong, .clue-grid li span { display: block; }
 .clue-grid li span { margin-top: 2px; color: var(--ink-soft); font-size: .88em; }
 
+.table-footer { display: grid; gap: 18px; padding-bottom: 14px; }
+.checkpoint-panel { position: relative; padding: 20px 22px; }
+.checkpoint-form { margin-top: 18px; }
+.checkpoint-form label { display: block; margin-bottom: 6px; color: var(--ink-soft); font-size: .75rem; font-weight: 750; }
+.checkpoint-form > div { display: flex; gap: 8px; }
+.checkpoint-form input { flex: 1 1 240px; min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; color: var(--ink); background: var(--paper); font: inherit; }
+.checkpoint-panel button { border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 11px; color: var(--ink); background: var(--paper); font: inherit; font-size: .76rem; font-weight: 750; cursor: pointer; }
+.checkpoint-panel button:disabled { opacity: .5; cursor: default; }
+.checkpoint-panel .quiet { margin: 14px 0 0; color: var(--ink-soft); font-size: .78rem; }
+.mounted-checkpoints { display: grid; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
+.mounted-checkpoints li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; }
+.mounted-checkpoints li span { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.mounted-checkpoints small { color: var(--ink-soft); }
+.export-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.confirmation-panel { position: relative; margin-top: 16px; padding: 16px; border: 2px solid var(--crimson); border-radius: 10px; background: var(--paper); }
+.confirmation-panel h3 { margin: 0 0 8px; font-family: var(--font-notes); }
+.confirmation-panel p { margin: 5px 0; font-size: .82rem; }
+.confirmation-panel > div { display: flex; gap: 8px; margin-top: 12px; }
 .recovery-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 18px; min-height: 54px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: .7rem; font-weight: 650; letter-spacing: .04em; }
 .status-dot { width: 7px; height: 7px; margin-right: -10px; border-radius: 50%; background: var(--line-strong); }
 .status-dot--ready { background: var(--brass); }
@@ -138,7 +156,7 @@
 }
 
 @media (max-width: 560px) {
-  .table-toolbar, .table-shell > main, .recovery-strip { width: min(100% - 24px, 1180px); }
+  .table-toolbar, .table-shell > main, .table-footer { width: min(100% - 24px, 1180px); }
   .table-toolbar { min-height: 56px; }
   .table-brand strong { font-size: .88rem; }
   .table-toolbar label > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
@@ -153,4 +171,5 @@
   .party-stack { gap: 12px; }
   .table-grid, .table-column { gap: 16px; }
   .recovery-strip { padding-block: 14px; }
+  .checkpoint-form > div { align-items: stretch; flex-direction: column; }
 }

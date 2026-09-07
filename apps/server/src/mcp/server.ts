@@ -42,7 +42,7 @@ export function createMcpServer(deps: ServerDependencies): McpServer {
 
 /** SDK registration is kept beside the in-process adapter so the same handlers own both boundaries. */
 export function createSdkMcpServer(deps: ServerDependencies, widgetResource: WidgetResource = loadWidgetResource()): SdkMcpServer {
-  const server = new SdkMcpServer({ name: "third-chair", version: "0.1.0" });
+  const server = new SdkMcpServer({ name: "third-chair", version: "0.2.0" });
   server.registerTool(listCampaignsDescriptor.name, { description: listCampaignsDescriptor.description, inputSchema: listCampaignsDescriptor.inputSchema, outputSchema: listCampaignsDescriptor.outputSchema, annotations: listCampaignsDescriptor.annotations }, async (input) => listCampaigns(deps, input));
   server.registerTool(createCampaignDescriptor.name, { description: createCampaignDescriptor.description, inputSchema: createCampaignDescriptor.inputSchema, outputSchema: createCampaignDescriptor.outputSchema, annotations: createCampaignDescriptor.annotations }, async (input) => createCampaign({ campaignCreator: requireCampaignCreator(deps) }, input));
   server.registerTool(getTableViewDescriptor.name, { description: getTableViewDescriptor.description, inputSchema: getTableViewDescriptor.inputSchema, outputSchema: getTableViewDescriptor.outputSchema, annotations: getTableViewDescriptor.annotations }, async (input) => getTableView(deps, input));
@@ -51,7 +51,6 @@ export function createSdkMcpServer(deps: ServerDependencies, widgetResource: Wid
   server.registerTool(recallKnownLoreDescriptor.name, { description: recallKnownLoreDescriptor.description, inputSchema: recallKnownLoreDescriptor.inputSchema, outputSchema: recallKnownLoreDescriptor.outputSchema, annotations: recallKnownLoreDescriptor.annotations }, async (input) => recallKnownLore({ ...deps, sourcePack: requireSourcePack(deps) }, input));
   server.registerTool(createCheckpointDescriptor.name, { description: createCheckpointDescriptor.description, inputSchema: createCheckpointDescriptor.inputSchema, outputSchema: createCheckpointDescriptor.outputSchema, annotations: createCheckpointDescriptor.annotations }, async (input) => createCheckpoint({ checkpoints: requireCheckpoints(deps) }, input));
   server.registerTool(rewindToCheckpointDescriptor.name, { description: rewindToCheckpointDescriptor.description, inputSchema: rewindToCheckpointDescriptor.inputSchema, outputSchema: rewindToCheckpointDescriptor.outputSchema, annotations: rewindToCheckpointDescriptor.annotations }, async (input) => rewindToCheckpoint({ campaigns: deps.campaigns, checkpoints: requireCheckpoints(deps) }, input));
-  server.registerTool(exportCampaignDescriptor.name, { description: exportCampaignDescriptor.description, inputSchema: exportCampaignDescriptor.inputSchema, outputSchema: exportCampaignDescriptor.outputSchema, annotations: exportCampaignDescriptor.annotations }, async (input) => exportCampaign(exportDependencies(deps), input));
   registerAppTool(server, renderTableDescriptor.name, {
     title: renderTableDescriptor.title,
     description: renderTableDescriptor.description,
@@ -60,6 +59,7 @@ export function createSdkMcpServer(deps: ServerDependencies, widgetResource: Wid
     annotations: renderTableDescriptor.annotations,
     _meta: renderTableDescriptor._meta,
   }, async (input) => renderTable(deps, input));
+  server.registerTool(exportCampaignDescriptor.name, { description: exportCampaignDescriptor.description, inputSchema: exportCampaignDescriptor.inputSchema, outputSchema: exportCampaignDescriptor.outputSchema, annotations: exportCampaignDescriptor.annotations }, async (input) => exportCampaign(exportDependencies(deps), input));
   registerAppResource(server, "Raven's Table", TABLE_WIDGET_URI, {
     mimeType: widgetResource.mimeType,
     description: "Persistent player-safe Third Chair table",

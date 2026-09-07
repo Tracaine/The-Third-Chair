@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CharacterCard } from "./components/CharacterCard";
 import { ClueThreads } from "./components/ClueThreads";
 import { CombatPanel } from "./components/CombatPanel";
+import { CheckpointPanel } from "./components/CheckpointPanel";
 import { DecisionBanner } from "./components/DecisionBanner";
 import { DiceTray } from "./components/DiceTray";
 import { RecoveryStrip } from "./components/RecoveryStrip";
@@ -73,6 +74,7 @@ export function App({ view: initialView = explorationFixture, bridge: providedBr
         view={view.playerView}
         lastMutationId={view.lastMutationId}
         serverStatus={view.serverStatus}
+        controls={<CheckpointPanel view={view} bridge={bridge} refresh={refresh} />}
       />
     </div>
   );
