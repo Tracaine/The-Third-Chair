@@ -13,7 +13,10 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-function lifecycleBridge(options: { readonly secondTableView?: Promise<ToolCallResult> } = {}) {
+function lifecycleBridge(options: {
+  readonly firstTableView?: Promise<ToolCallResult>;
+  readonly secondTableView?: Promise<ToolCallResult>;
+} = {}) {
   const calls: Call[] = [];
   const downloads: DownloadableResourceLink[] = [];
   let tableViewCalls = 0;
@@ -72,6 +75,7 @@ function lifecycleBridge(options: { readonly secondTableView?: Promise<ToolCallR
       }
       if (name === "get_table_view") {
         tableViewCalls += 1;
+        if (tableViewCalls === 1 && options.firstTableView) return options.firstTableView;
         if (tableViewCalls === 2 && options.secondTableView) return options.secondTableView;
         return { structuredContent: { playerViewId: current.playerViewId, view: current.playerView } };
       }
@@ -121,7 +125,8 @@ describe("checkpoint and campaign lifecycle controls", () => {
     expect(createCall.args.requestId).toMatch(/^[0-9a-f-]{36}$/i);
     expect(calls.map(({ name }) => name)).toEqual(["create_checkpoint", "get_table_view"]);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Rewind to Before opening the vault" }));
+    const rewindTrigger = await screen.findByRole("button", { name: "Rewind to Before opening the vault" });
+    fireEvent.click(rewindTrigger);
     const dialog = screen.getByRole("dialog", { name: "Confirm campaign rewind" });
     expect(within(dialog).getByText("Before opening the vault")).toBeInTheDocument();
     expect(within(dialog).getByText("State 12")).toBeInTheDocument();
@@ -141,6 +146,7 @@ describe("checkpoint and campaign lifecycle controls", () => {
     expect(calls.map(({ name }) => name)).toEqual([
       "create_checkpoint", "get_table_view", "rewind_to_checkpoint", "get_table_view", "render_table",
     ]);
+    await waitFor(() => expect(rewindTrigger).toHaveFocus());
   });
 
   it("defaults export to player-safe and warns separately before full-private export", async () => {
@@ -228,6 +234,31 @@ describe("checkpoint and campaign lifecycle controls", () => {
     } });
     await waitFor(() => expect(calls.filter(({ name }) => name === "get_table_view")).toHaveLength(3));
     await waitFor(() => expect(screen.getByText("State 13")).toBeInTheDocument());
+  });
+
+  it("keeps an in-flight confirmation modal until refresh settles, then restores its enabled trigger", async () => {
+    const exportRefresh = deferred<ToolCallResult>();
+    const { bridge, calls } = lifecycleBridge({ firstTableView: exportRefresh.promise });
+    render(<App view={explorationFixture} bridge={bridge} />);
+
+    const trigger = screen.getByRole("button", { name: "Export full-private SaveSet" });
+    trigger.focus();
+    fireEvent.click(trigger);
+    const dialog = screen.getByRole("dialog", { name: "Confirm spoiler-bearing export" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Export with spoilers" }));
+    await waitFor(() => expect(calls.some(({ name }) => name === "get_table_view")).toBe(true));
+
+    expect(screen.getByRole("dialog", { name: "Confirm spoiler-bearing export" })).toBeInTheDocument();
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    expect(screen.getByRole("dialog", { name: "Confirm spoiler-bearing export" })).toBeInTheDocument();
+
+    exportRefresh.resolve({ structuredContent: {
+      playerViewId: explorationFixture.playerViewId,
+      view: explorationFixture.playerView,
+    } });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Confirm spoiler-bearing export" })).not.toBeInTheDocument());
+    expect(trigger).toBeEnabled();
+    expect(trigger).toHaveFocus();
   });
 
   it("renders the returned export resource as an accessible archive action", async () => {

@@ -68,6 +68,7 @@ export function CheckpointPanel({
   const [label, setLabel] = useState("");
   const [checkpoints, setCheckpoints] = useState<readonly CheckpointSummary[]>([]);
   const [confirmation, setConfirmation] = useState<PendingConfirmation>();
+  const [closeConfirmationWhenSettled, setCloseConfirmationWhenSettled] = useState(false);
   const [archives, setArchives] = useState<readonly AvailableArchive[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(false);
@@ -75,8 +76,15 @@ export function CheckpointPanel({
   useEffect(() => {
     setCheckpoints([]);
     setArchives([]);
+    setCloseConfirmationWhenSettled(false);
     setConfirmation(undefined);
   }, [view.playerView.campaignId]);
+
+  useEffect(() => {
+    if (pending || !closeConfirmationWhenSettled) return;
+    setCloseConfirmationWhenSettled(false);
+    setConfirmation(undefined);
+  }, [pending, closeConfirmationWhenSettled]);
 
   const call = async (name: string, args: Record<string, unknown>) => {
     if (!bridge) throw new Error("TABLE_BRIDGE_UNAVAILABLE");
@@ -128,7 +136,7 @@ export function CheckpointPanel({
         expectedStateVersion: view.playerView.stateVersion,
         confirmed: true,
       });
-      setConfirmation(undefined);
+      setCloseConfirmationWhenSettled(true);
     });
   };
 
@@ -150,7 +158,7 @@ export function CheckpointPanel({
         ...current.filter(({ exportId }) => exportId !== output.exportId),
         { ...output, mode, resource },
       ]);
-      setConfirmation(undefined);
+      if (mode === "FULL_PRIVATE") setCloseConfirmationWhenSettled(true);
     });
   };
 
@@ -248,7 +256,7 @@ export function CheckpointPanel({
       {confirmation?.kind === "REWIND" ? (
         <ConfirmationDialog
           labelledBy="rewind-confirmation-heading"
-          onClose={() => setConfirmation(undefined)}
+          onClose={() => { if (!pending) setConfirmation(undefined); }}
           returnFocus={confirmation.returnFocus}
         >
           <h3 id="rewind-confirmation-heading">Confirm campaign rewind</h3>
@@ -265,7 +273,7 @@ export function CheckpointPanel({
       {confirmation?.kind === "FULL_PRIVATE_EXPORT" ? (
         <ConfirmationDialog
           labelledBy="export-confirmation-heading"
-          onClose={() => setConfirmation(undefined)}
+          onClose={() => { if (!pending) setConfirmation(undefined); }}
           returnFocus={confirmation.returnFocus}
         >
           <h3 id="export-confirmation-heading">Confirm spoiler-bearing export</h3>
