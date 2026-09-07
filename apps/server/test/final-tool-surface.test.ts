@@ -49,7 +49,7 @@ describe("final MCP tool surface", () => {
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     try {
-      expect(client.getServerVersion()).toEqual({ name: "third-chair", version: "0.2.1" });
+      expect(client.getServerVersion()).toEqual({ name: "third-chair", version: "0.2.2" });
       const listed = await client.listTools();
       expect(listed.tools.map(({ name }) => name)).toEqual(expectedNames);
       expect(Object.fromEntries(listed.tools.map(({ name, annotations }) => [name, annotations]))).toEqual(expectedAnnotations);

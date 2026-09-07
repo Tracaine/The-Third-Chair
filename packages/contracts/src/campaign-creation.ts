@@ -22,8 +22,28 @@ export const CampaignCreationRequestSchema = z.object({
   boundaries: z.array(z.string().trim().min(1).max(500)).max(30).default([]),
   sourcePackHash: SourceHashSchema,
   setting: CampaignSettingSchema,
+  creationMode: z.enum(["ADVANCED", "QUICKSTART"]).default("ADVANCED"),
   billCharacter: CharacterDraftSchema.optional(),
   ravenCharacter: CharacterDraftSchema.optional(),
+}).strict();
+
+export const QuickstartArchetypeSchema = z.enum([
+  "STALWART_FIGHTER",
+  "CUNNING_ROGUE",
+  "ARCANE_SCHOLAR",
+  "DAWN_CLERIC",
+]);
+
+export const QuickstartCharacterChoiceSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  pronouns: z.string().trim().max(80).default(""),
+  archetype: QuickstartArchetypeSchema,
+  characterHook: z.string().trim().max(500).default(""),
+}).strict();
+
+export const QuickstartCampaignSchema = z.object({
+  billCharacter: QuickstartCharacterChoiceSchema,
+  ravenCharacter: QuickstartCharacterChoiceSchema,
 }).strict();
 
 export const CampaignRecordOriginSchema = z.enum(["AUTHORED_SETTING", "CAMPAIGN_GENERATED"]);
@@ -181,6 +201,8 @@ export const CreateCampaignOutputSchema = z.object({
 }).strict();
 
 export type CampaignCreationRequest = z.infer<typeof CampaignCreationRequestSchema>;
+export type QuickstartArchetype = z.infer<typeof QuickstartArchetypeSchema>;
+export type QuickstartCharacterChoice = z.infer<typeof QuickstartCharacterChoiceSchema>;
 export type CampaignSpineProposal = z.infer<typeof CampaignSpineProposalSchema>;
 export type CampaignSpineInput = z.infer<typeof CampaignSpineInputSchema>;
 export type PublicCharacterCard = z.infer<typeof PublicCharacterCardSchema>;

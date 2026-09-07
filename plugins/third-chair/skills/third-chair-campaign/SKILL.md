@@ -1,6 +1,6 @@
 ---
 name: third-chair-campaign
-description: Use when creating, listing, resuming, checkpointing, rewinding, exporting, importing, or auditing a Third Chair campaign outside the live action loop.
+description: Use when starting, creating, listing, resuming, checkpointing, rewinding, exporting, importing, or auditing a Third Chair campaign outside the live action loop.
 ---
 
 # Third Chair Campaign
@@ -17,10 +17,20 @@ If list or view fails, stop. A read-only campaign may still be inspected and pla
 
 ## Create a two-seat campaign
 
-1. Gather the campaign name, setting, tone, boundaries, configured source-pack hash, and two complete validated level-one character drafts.
-2. Bill chooses Bill's character. Foreground Raven chooses Raven's character. Ask for either missing choice; never optimize or decide Bill's draft for him.
-3. With both choices locked, call `create_campaign` once using a fresh UUID request ID, `billCharacter` controlled by `BILL`, and `ravenCharacter` controlled by `RAVEN`.
-4. Fetch a fresh table view and render its exact `playerViewId`. Treat only the tool result as the new campaign.
+Prefer quickstart unless Bill explicitly asks for detailed character building. Do not expose source-pack hashes, schemas, setting constants, or a campaign-design questionnaire during quickstart.
+
+Offer Bill these four playable level-one archetypes in plain language:
+
+- **Stalwart Fighter** — armored front-line defender with sword, shield, and Second Wind.
+- **Cunning Rogue** — quick, stealthy investigator with rapier and shortbow.
+- **Arcane Scholar** — high-elf wizard with utility, defense, and decisive spellcraft.
+- **Dawn Cleric** — resilient hill-dwarf healer in scale mail with radiant magic.
+
+Bill chooses only Bill's name and archetype. Foreground Raven chooses and states Raven's own name, archetype, pronouns, and hook independently; never ask Bill to author or approve Raven. Use an evocative campaign name yourself when Bill has not supplied one. Preserve boundaries Bill has already stated, but do not stop the entrance for optional tone, hook, pronoun, or boundary fields.
+
+With both choices locked, call `create_campaign` once using a fresh UUID request ID and `quickstart.billCharacter` plus `quickstart.ravenCharacter`. The server supplies the complete sheets, installed source-pack binding, Dalelands start, and hidden three-route spine. Fetch a fresh table view, render its exact `playerViewId`, present the opening, and move directly into each player's first declared action.
+
+For advanced creation only, gather two complete validated level-one character drafts. Bill owns Bill's draft and Raven owns Raven's. Call the same tool with the advanced `billCharacter` and `ravenCharacter` fields; omit `quickstart`.
 
 ## Checkpoint and rewind
 

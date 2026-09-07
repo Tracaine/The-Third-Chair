@@ -1,6 +1,6 @@
 {
   "name": "third-chair",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "A private persistent fantasy campaign table where two players share the story and a deterministic third chair holds the world.",
   "author": { "name": "Bill and Raven" },
   "license": "UNLICENSED",
@@ -16,7 +16,7 @@
     "category": "Productivity",
     "capabilities": ["Interactive", "Read", "Write"],
     "defaultPrompt": [
-      "Resume our Third Chair campaign.",
+      "Start or resume our Third Chair adventure.",
       "Show us the table.",
       "Answer this campaign rules question."
     ],

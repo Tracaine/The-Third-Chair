@@ -1,6 +1,6 @@
 {
   "name": "@third-chair/source-pack",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "type": "module",
   "exports": {
@@ -16,7 +16,7 @@
     "build": "tsc -b tsconfig.build.json"
   },
   "dependencies": {
-    "@third-chair/contracts": "0.2.1",
+    "@third-chair/contracts": "0.2.2",
     "zod": "^4.0.0"
   }
 }

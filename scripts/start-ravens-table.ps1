@@ -140,7 +140,7 @@ try {
     $env:THIRD_CHAIR_WIDGET_DOMAIN = "https://tracaine.github.io"
   }
 
-  $serverArgs = @("--import", "tsx", "apps/server/src/main.ts")
+  $serverArgs = @("--conditions=development", "--import", "tsx", "apps/server/src/main.ts")
 
   Write-Host "Starting the live Third Chair server..."
   $serverProcess = Start-Process -FilePath $node.Source -ArgumentList $serverArgs -WorkingDirectory $repoRoot -NoNewWindow -PassThru -RedirectStandardOutput $serverOutLog -RedirectStandardError $serverErrorLog

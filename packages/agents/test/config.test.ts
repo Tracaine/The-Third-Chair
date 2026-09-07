@@ -5,7 +5,7 @@ describe("loadAgentConfig", () => {
   it("loads the bounded runtime defaults", () => {
     expect(loadAgentConfig({})).toEqual({
       directorModel: "gpt-5.6-sol",
-      directorReasoning: "high",
+      directorReasoning: "low",
       narratorModel: "gpt-5.6-sol",
       narratorReasoning: "low",
       traceMode: "off",

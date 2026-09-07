@@ -222,7 +222,12 @@ export function createTurnEngine(deps: TurnEngineDeps): TurnEngine {
       let rejected: InvalidDirectorProposalError | null = null;
       try { rawProposal = await deps.director.propose(directorInput); }
       catch (error) {
-        if (!(error instanceof InvalidDirectorProposalError)) throw error;
+        if (!(error instanceof InvalidDirectorProposalError)) {
+          if (error instanceof Error && error.message.startsWith("INJECTED_FAILURE:")) throw error;
+          const issue = safeIssue(error);
+          deps.turns.markFailed(turn.id, { code: issue.message, message: issue.message });
+          throw error;
+        }
         rawProposal = error.invalidProposal;
         rejected = error;
       }

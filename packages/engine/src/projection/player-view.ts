@@ -78,6 +78,10 @@ export function projectPlayerView(state: WorldState, viewer: PlayerSeat): Player
       .map(([id, actor]) => ({
         id, controller: actor.controller, name: actor.name, level: actor.level,
         experiencePoints: actor.experiencePoints ?? 0,
+        pronouns: actor.pronouns ?? "",
+        ancestrySourceKey: actor.ancestrySourceKey,
+        classSourceKey: actor.classSourceKey,
+        backgroundSourceKey: actor.backgroundSourceKey,
         abilities: {
           strength: actor.abilities.strength, dexterity: actor.abilities.dexterity,
           constitution: actor.abilities.constitution, intelligence: actor.abilities.intelligence,
@@ -87,6 +91,13 @@ export function projectPlayerView(state: WorldState, viewer: PlayerSeat): Player
         currentHp: actor.currentHp, temporaryHp: actor.temporaryHp, speed: actor.speed, conditions: [...actor.conditions],
         deathSaves: { successes: actor.deathSaves.successes, failures: actor.deathSaves.failures }, publicNotes: [...actor.publicNotes],
         ...(actor.controller === viewer ? {
+          saves: { ...(actor.saves ?? {}) },
+          skills: { ...(actor.skills ?? {}) },
+          spellSlots: Object.fromEntries(Object.entries(actor.spellSlots ?? {}).map(([level, slots]) => [level, { ...slots }])),
+          spells: [...actor.spells],
+          equipment: Object.values(state.inventory)
+            .filter((item) => item.ownerActorId === id)
+            .map((item) => ({ id: item.id, name: item.name, quantity: item.quantity, equippedSlots: [...item.equippedSlots] })),
           resources: Object.values(actor.resources).map((resource) => ({
             id: resource.id, name: resource.name, current: resource.current, maximum: resource.maximum,
           })),

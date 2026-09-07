@@ -212,6 +212,7 @@
 .character-card--raven .kicker { color: var(--plum); }
 .character-card__header { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
 .character-card__header h2 { font-size: 1.62rem; }
+.character-card__identity { margin: 3px 0 0; color: var(--ink-soft); font-family: var(--font-notes); font-size: .78rem; }
 .level { padding: 3px 7px; color: var(--ink-soft); border: 1px solid var(--line); border-radius: 3px; background: var(--paper-muted); font-size: .66rem; font-weight: 760; }
 .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); margin: 19px 0 9px; }
 .stat-row div { padding-inline: 10px; border-left: 1px solid var(--line); }
@@ -221,6 +222,11 @@
 .stat-row dd span { color: var(--ink-soft); font-family: var(--font-body); font-size: .62em; font-weight: 500; }
 .hp-track { height: 5px; padding: 1px; background: var(--crimson-soft); border: 1px solid color-mix(in srgb, var(--crimson), transparent 64%); border-radius: 99px; overflow: hidden; }
 .hp-track span { display: block; height: 100%; background: linear-gradient(90deg, #7d252e, var(--crimson)); border-radius: inherit; }
+.ability-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin: 14px 0 0; }
+.ability-grid div { padding: 6px 2px 5px; border: 1px solid var(--line); border-radius: 3px; background: var(--paper-muted); text-align: center; }
+.ability-grid dt { color: var(--ink-soft); font-size: .55rem; font-weight: 850; letter-spacing: .08em; }
+.ability-grid dd { margin: 1px 0 0; font-family: var(--font-notes); font-size: .96rem; font-weight: 800; }
+.ability-grid dd span { display: block; color: var(--brass); font-family: var(--font-body); font-size: .62rem; }
 .character-card__details { display: grid; gap: 14px; margin-top: 19px; }
 .character-card__details h3, .combat-grid h3, .clue-grid h3 { margin: 0 0 7px; color: var(--ink-soft); font-size: .64rem; font-weight: 850; letter-spacing: .14em; text-transform: uppercase; }
 .quiet { margin: 0; color: var(--ink-soft); font-size: .8rem; }
@@ -230,6 +236,14 @@
 .resource-list { display: grid; gap: 5px; }
 .resource-list li { display: flex; justify-content: space-between; gap: 8px; font-size: .79rem; }
 .resource-list strong { color: var(--brass); }
+.character-hook { margin: 0; padding: 10px 12px; border-left: 2px solid var(--brass); background: var(--paper-muted); font-family: var(--font-notes); font-size: .85rem; font-style: italic; }
+.sheet-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.sheet-list, .slot-list { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.sheet-list li, .slot-list li { display: flex; justify-content: space-between; gap: 8px; color: var(--ink-soft); font-size: .72rem; }
+.sheet-list strong, .slot-list strong { color: var(--brass); }
+.sheet-list--compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sheet-prose { margin: 0; color: var(--ink); font-family: var(--font-notes); font-size: .8rem; line-height: 1.45; }
+.slot-list { margin-top: 6px; }
 
 .dice-tray, .clue-threads, .combat-panel { overflow: hidden; padding: clamp(21px, 3vw, 29px); }
 .check-list { margin: 21px 0 0; padding: 0; list-style: none; }

@@ -10,7 +10,11 @@ describe("create_campaign MCP boundary", () => {
       { ...baseCard, actorId: "test_actor_bill", controller: "BILL" as const, name: "Alden" },
       { ...baseCard, actorId: "test_actor_raven", controller: "RAVEN" as const, name: "Vesper" },
     ], currentDecision: { id: "test_decision_mcp", stateVersion: 0, mode: "EXPLORATION", owner: "BOTH", situation: "A caravan is detained at the bridge.", eligibleActorIds: ["test_actor_bill", "test_actor_raven"], constraints: "Choose independently.", requiredInput: "Bill and Raven each declare an action.", legalOptions: [] }, stateHash: "f".repeat(64) };
-    const result = await createCampaign({ campaignCreator: { create: async () => safe } as never }, input as never);
+    const result = await createCampaign({
+      campaignCreator: { create: async () => safe } as never,
+      sourcePack: { manifest: () => ({ sourcePackManifestHash: "a".repeat(64) }) } as never,
+      ownerId: "Bill",
+    }, input);
     expect(result.structuredContent).toMatchObject({ campaignId: "test_campaign_mcp", visibleOpening: safe.visibleOpening });
     expect(result.structuredContent.playerViewId).toBe(computePlayerViewId(safe.campaignId, 0, "RAVEN", safe.stateHash));
     expect(JSON.stringify(result)).not.toMatch(/centralTruth|rngSeed|spine|DIRECTOR/);

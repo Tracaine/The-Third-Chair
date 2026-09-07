@@ -63,7 +63,7 @@ describe("campaign spine contract", () => {
     const run: AgentRunClient["run"] = async (agent, serialized, options) => {
       expect(agent.name).toBe("Third Chair Campaign Spine");
       expect(agent.model).toBe("gpt-5.6-sol");
-      expect(agent.modelSettings).toEqual({ reasoning: { effort: "high" }, text: { verbosity: "low" }, parallelToolCalls: false });
+      expect(agent.modelSettings).toEqual({ reasoning: { effort: "low" }, text: { verbosity: "low" }, parallelToolCalls: false });
       expect(agent.outputType).toBe(CampaignSpineProposalSchema);
       expect(agent.tools.map((tool) => tool.name)).not.toContain("lock_and_resolve_checks");
       expect(options).not.toHaveProperty("session");

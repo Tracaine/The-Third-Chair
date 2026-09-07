@@ -18,6 +18,7 @@ import { sha256Json } from "../hash.js";
 import { buildLevelOneCharacter } from "./character-builder.js";
 import type { CharacterCatalog } from "./catalog.js";
 import { validateCharacterOwnership } from "./validate-character.js";
+import { createQuickstartCampaignSpine } from "./quickstart-spine.js";
 
 export interface CampaignSpinePort {
   generate(input: CampaignSpineInput): Promise<CampaignSpineProposal>;
@@ -248,7 +249,9 @@ export function createCampaignBuilder(deps: CampaignBuilderDependencies): Campai
         characters: [ownership.bill, ownership.raven].map((character) => ({ controller: character.controller,
           name: character.name, classSourceKey: character.classSourceKey, ancestrySourceKey: character.ancestrySourceKey,
           backgroundSourceKey: character.backgroundSourceKey, characterHook: character.characterHook })) });
-      const spine = CampaignSpineProposalSchema.parse(await deps.spine.generate(spineInput));
+      const spine = request.creationMode === "QUICKSTART"
+        ? createQuickstartCampaignSpine(spineInput)
+        : CampaignSpineProposalSchema.parse(await deps.spine.generate(spineInput));
       const campaignId = ids.campaign();
       const branchId = ids.branch();
       const state = buildInitialState({ request, spine, bill: ownership.bill, raven: ownership.raven, catalog,

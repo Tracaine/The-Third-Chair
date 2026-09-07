@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const AgentConfigSchema = z.object({
   directorModel: z.literal("gpt-5.6-sol").default("gpt-5.6-sol"),
-  directorReasoning: z.enum(["low", "medium", "high", "xhigh", "max"]).default("high"),
+  directorReasoning: z.enum(["low", "medium", "high", "xhigh", "max"]).default("low"),
   narratorModel: z.literal("gpt-5.6-sol").default("gpt-5.6-sol"),
   narratorReasoning: z.enum(["low", "medium", "high", "xhigh", "max"]).default("low"),
   traceMode: z.enum(["off", "private_dev"]).default("off"),

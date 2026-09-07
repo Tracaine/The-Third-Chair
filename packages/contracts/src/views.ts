@@ -38,6 +38,18 @@ export const PlayerActorViewSchema = z.object({
   conditions: z.array(BoundedNameSchema),
   deathSaves: z.object({ successes: z.number().int().min(0).max(3), failures: z.number().int().min(0).max(3) }).strict(),
   publicNotes: z.array(VisibleTextSchema),
+  pronouns: z.string().trim().max(80).optional(),
+  ancestrySourceKey: BoundedNameSchema.optional(),
+  classSourceKey: BoundedNameSchema.optional(),
+  backgroundSourceKey: BoundedNameSchema.optional(),
+  saves: z.record(z.string(), z.number().int()).optional(),
+  skills: z.record(z.string(), z.number().int()).optional(),
+  spellSlots: z.record(z.string(), z.object({ current: NonnegativeIntSchema, maximum: NonnegativeIntSchema }).strict()).optional(),
+  spells: z.array(BoundedNameSchema).optional(),
+  equipment: z.array(z.object({
+    id: PersistedIdSchema, name: BoundedNameSchema, quantity: NonnegativeIntSchema,
+    equippedSlots: z.array(BoundedNameSchema),
+  }).strict()).optional(),
   resources: z.array(z.object({
     id: PersistedIdSchema, name: BoundedNameSchema, current: NonnegativeIntSchema, maximum: NonnegativeIntSchema,
   }).strict()).optional(),

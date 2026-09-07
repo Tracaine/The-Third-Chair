@@ -23,6 +23,9 @@ function guardMutation(deps: ServerDependencies, name: string, input: unknown): 
 }
 function requireSourcePack(deps: ServerDependencies): SourcePackService { if (!deps.sourcePack) throw new Error("SOURCE_PACK_REQUIRED"); return deps.sourcePack; }
 function requireCampaignCreator(deps: ServerDependencies): CampaignBuilder { if (!deps.campaignCreator) throw new Error("CAMPAIGN_CREATOR_REQUIRED"); return deps.campaignCreator; }
+function campaignCreationDependencies(deps: ServerDependencies) {
+  return { campaignCreator: requireCampaignCreator(deps), sourcePack: requireSourcePack(deps), ownerId: deps.resourceOwnerId ?? "bill-local" };
+}
 function requireCheckpoints(deps: ServerDependencies): CheckpointRepository { if (!deps.checkpoints) throw new Error("CHECKPOINT_REPOSITORY_REQUIRED"); return deps.checkpoints; }
 function exportDependencies(deps: ServerDependencies) {
   if (!deps.archives || !deps.exports || !deps.exportDirectory) throw new Error("EXPORT_DEPENDENCIES_REQUIRED");
@@ -32,7 +35,7 @@ export function createMcpServer(deps: ServerDependencies): McpServer {
   return { tools: [listCampaignsDescriptor, createCampaignDescriptor, getTableViewDescriptor, advanceGameDescriptor, answerRulesDescriptor, recallKnownLoreDescriptor, createCheckpointDescriptor, rewindToCheckpointDescriptor, renderTableDescriptor, exportCampaignDescriptor], async invoke(name, input) {
     guardMutation(deps, name, input);
     if (name === "list_campaigns") return listCampaigns(deps, input as never);
-    if (name === "create_campaign") return createCampaign({ campaignCreator: requireCampaignCreator(deps) }, input as never);
+    if (name === "create_campaign") return createCampaign(campaignCreationDependencies(deps), input);
     if (name === "get_table_view") return getTableView(deps, input as never);
     if (name === "advance_game") return advanceGame(deps, input);
     if (name === "answer_rules") return answerRules({ ...deps, sourcePack: requireSourcePack(deps) }, input as never);
@@ -47,9 +50,9 @@ export function createMcpServer(deps: ServerDependencies): McpServer {
 
 /** SDK registration is kept beside the in-process adapter so the same handlers own both boundaries. */
 export function createSdkMcpServer(deps: ServerDependencies, widgetResource: WidgetResource = loadWidgetResource()): SdkMcpServer {
-  const server = new SdkMcpServer({ name: "third-chair", version: "0.2.1" });
+  const server = new SdkMcpServer({ name: "third-chair", version: "0.2.2" });
   server.registerTool(listCampaignsDescriptor.name, { description: listCampaignsDescriptor.description, inputSchema: listCampaignsDescriptor.inputSchema, outputSchema: listCampaignsDescriptor.outputSchema, annotations: listCampaignsDescriptor.annotations }, async (input) => listCampaigns(deps, input));
-  server.registerTool(createCampaignDescriptor.name, { description: createCampaignDescriptor.description, inputSchema: createCampaignDescriptor.inputSchema, outputSchema: createCampaignDescriptor.outputSchema, annotations: createCampaignDescriptor.annotations }, async (input) => { guardMutation(deps, "create_campaign", input); return createCampaign({ campaignCreator: requireCampaignCreator(deps) }, input); });
+  server.registerTool(createCampaignDescriptor.name, { description: createCampaignDescriptor.description, inputSchema: createCampaignDescriptor.inputSchema, outputSchema: createCampaignDescriptor.outputSchema, annotations: createCampaignDescriptor.annotations }, async (input) => { guardMutation(deps, "create_campaign", input); return createCampaign(campaignCreationDependencies(deps), input); });
   server.registerTool(getTableViewDescriptor.name, { description: getTableViewDescriptor.description, inputSchema: getTableViewDescriptor.inputSchema, outputSchema: getTableViewDescriptor.outputSchema, annotations: getTableViewDescriptor.annotations }, async (input) => getTableView(deps, input));
   server.registerTool(advanceGameDescriptor.name, { description: advanceGameDescriptor.description, inputSchema: advanceGameDescriptor.inputSchema, outputSchema: advanceGameDescriptor.outputSchema, annotations: advanceGameDescriptor.annotations }, async (input) => { guardMutation(deps, "advance_game", input); return advanceGame(deps, input); });
   server.registerTool(answerRulesDescriptor.name, { description: answerRulesDescriptor.description, inputSchema: answerRulesDescriptor.inputSchema, outputSchema: answerRulesDescriptor.outputSchema, annotations: answerRulesDescriptor.annotations }, async (input) => answerRules({ ...deps, sourcePack: requireSourcePack(deps) }, input));

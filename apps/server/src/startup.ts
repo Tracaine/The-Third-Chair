@@ -208,7 +208,7 @@ export function mutationRecoveryGuard(startup: StartupResult) {
     if (toolName === "create_campaign") {
       const requestedHash = payload.sourcePackHash;
       const availableHash = startup.sourcePack?.manifest().sourcePackManifestHash;
-      if (requestedHash !== availableHash) throw new Error("SOURCE_PACK_HASH_MISMATCH");
+      if (typeof requestedHash === "string" && requestedHash !== availableHash) throw new Error("SOURCE_PACK_HASH_MISMATCH");
       return;
     }
     if (campaignId && startup.db.prepare("SELECT status FROM campaigns WHERE id=?").get(campaignId)) {

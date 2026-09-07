@@ -3,7 +3,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: third-chair:0.2.1
+    image: third-chair:0.2.2
     restart: unless-stopped
     ports:
       - "127.0.0.1:8787:8787"

@@ -24,7 +24,7 @@ export function createCampaignSpineAgent(config: AgentConfig, tools: readonly To
     name: "Third Chair Campaign Spine",
     instructions: loadCampaignSpinePrompt(),
     model: config.directorModel,
-    modelSettings: { reasoning: { effort: config.directorReasoning }, text: { verbosity: "low" }, parallelToolCalls: false },
+    modelSettings: { reasoning: { effort: "low" }, text: { verbosity: "low" }, parallelToolCalls: false },
     tools: [...tools],
     outputType: CampaignSpineProposalSchema,
   });

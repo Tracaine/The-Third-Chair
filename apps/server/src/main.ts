@@ -1,6 +1,6 @@
 import { createCampaignArchiveRepository, createCampaignCreationRepository, createCampaignRepository, createCheckpointRepository, createExportRepository, createTurnRepository } from "@third-chair/storage";
 import { WorldStateSchema, type ResolutionPlan } from "@third-chair/contracts";
-import { characterCatalogFromSourceOptions, createCampaignBuilder, createTurnEngine, FakeDirector, FakeNarrator, sha256Json } from "@third-chair/engine";
+import { characterCatalogFromSourceOptions, createCampaignBuilder, createStarterCharacterCatalog, createTurnEngine, FakeDirector, FakeNarrator, sha256Json } from "@third-chair/engine";
 import { loadAgentConfig } from "@third-chair/agents";
 import { readConfig } from "./config.js";
 import { createHttpApp } from "./http/app.js";
@@ -26,7 +26,7 @@ const exports = createExportRepository(db);
 const sourcePackDb = startup.sourcePackDatabase;
 const sourcePack = config.fakeMode ? createFakeSourcePack() : startup.sourcePack;
 const campaignId = "test_demo_campaign";
-if (sourcePack) try { campaigns.getCampaign(campaignId); } catch {
+if (config.fakeMode && sourcePack) try { campaigns.getCampaign(campaignId); } catch {
   const decision = { id: "test_demo_decision", stateVersion: 0, mode: "EXPLORATION" as const, owner: "BOTH" as const, eligibleActorIds: ["test_demo_bill", "test_demo_raven"], situation: "A desk waits in a lamplit room.", constraints: "State your actions.", requiredInput: "Both players act.", legalOptions: [] };
   const state = WorldStateSchema.parse({ metadata: { schemaVersion: 1, campaignId, turnNumber: 0, stateVersion: 0, worldDate: { yearDr: 1375, month: "Mirtul", day: 1 }, currentLocationId: "test_demo_room", sceneId: "test_demo_scene", rngCounter: 0 }, table: { rulesEdition: "SRD_5_1", settingDateDr: 1375, diceMode: "SERVER_OPEN", deathMode: "STANDARD", houseRules: [] }, actors: Object.fromEntries([["test_demo_bill", "BILL"], ["test_demo_raven", "RAVEN"]].map(([id, controller]) => [id, { controller, name: controller === "BILL" ? "Bill" : "Raven", level: 1, classSourceKey: "fighter", ancestrySourceKey: "human", backgroundSourceKey: "wanderer", abilities: { strength: 10, dexterity: 10, constitution: 10, intelligence: 10, wisdom: 10, charisma: 10 }, proficiencyBonus: 2, armorClass: 10, maxHp: 10, currentHp: 10, temporaryHp: 0, speed: 30, conditions: [], deathSaves: { successes: 0, failures: 0 }, resources: {}, spells: [], equipmentIds: [], publicNotes: [], scopedNotes: [] }])), inventory: {}, combat: null, locations: { test_demo_room: { id: "test_demo_room", audience: "PUBLIC", name: "Lamplit room", status: "Explored", facts: [] } }, npcs: {}, factions: {}, quests: {}, facts: [], events: [], clocks: {}, flags: [], currentDecision: decision });
   campaigns.createCampaign({ id: campaignId, ownerId: "local", name: config.fakeMode ? "Fake demo" : "Live demo",
@@ -44,7 +44,8 @@ const engine = createTurnEngine({ campaigns, turns, director: ports.director, na
 const campaignCreator = sourcePack ? createCampaignBuilder({ campaigns, creationRequests, sourcePack,
   loadCharacterCatalog: () => {
     if (!sourcePack.characterOptions) throw new Error("CHARACTER_OPTIONS_UNAVAILABLE");
-    return characterCatalogFromSourceOptions(sourcePack.characterOptions());
+    const options = sourcePack.characterOptions();
+    return options.length === 0 ? createStarterCharacterCatalog() : characterCatalogFromSourceOptions(options);
   },
   spine: config.fakeMode ? createFakeCampaignSpine() : (ports as ReturnType<typeof createLiveModelPorts>).campaignSpine }) : undefined;
 const widgetResource = startup.widgetResource;
