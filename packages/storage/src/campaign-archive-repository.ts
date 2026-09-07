@@ -74,24 +74,52 @@ function insertRows(
   for (const record of records) statement.run(...names.map((name) => record[name] ?? null));
 }
 
+function parentFirstBranches(records: readonly ArchiveRow[]): ArchiveRow[] {
+  const pending = new Map(records.map((record) => [String(record.id), record]));
+  const emitted = new Set<string>();
+  const ordered: ArchiveRow[] = [];
+  while (pending.size > 0) {
+    let progressed = false;
+    for (const [id, record] of pending) {
+      const parent = record.parent_branch_id;
+      if (parent !== null && !emitted.has(String(parent))) continue;
+      ordered.push(record);
+      emitted.add(id);
+      pending.delete(id);
+      progressed = true;
+    }
+    if (!progressed) throw new Error("SAVESET_BRANCH_LINEAGE_INVALID");
+  }
+  return ordered;
+}
+
 class SqliteCampaignArchiveRepository implements CampaignArchiveRepository {
   constructor(private readonly db: DatabaseSync) {}
 
   readCampaign(campaignId: CampaignId): CampaignArchiveSnapshot {
-    const campaign = this.db.prepare("SELECT * FROM campaigns WHERE id=?").get(campaignId) as CampaignSqlRow | undefined;
-    if (!campaign) throw new Error("CAMPAIGN_NOT_FOUND");
-    return {
-      campaign: campaignRow(campaign),
-      branches: rows(this.db, "SELECT * FROM branches WHERE campaign_id=? ORDER BY created_at,id", campaignId),
-      turns: rows(this.db, "SELECT * FROM turns WHERE campaign_id=? ORDER BY created_at,id", campaignId),
-      turnEvents: rows(this.db, `SELECT e.* FROM turn_events e JOIN turns t ON t.id=e.turn_id
-        WHERE t.campaign_id=? ORDER BY e.sequence`, campaignId),
-      activeTurns: rows(this.db, "SELECT * FROM active_turns WHERE campaign_id=? ORDER BY turn_id", campaignId),
-      recoveryCommands: rows(this.db, "SELECT * FROM turn_recovery_commands WHERE campaign_id=? ORDER BY created_at,id", campaignId),
-      checkpoints: rows(this.db, "SELECT * FROM checkpoints WHERE campaign_id=? ORDER BY state_version,created_at,id", campaignId),
-      journals: rows(this.db, "SELECT * FROM journals WHERE campaign_id=? ORDER BY state_version,audience", campaignId),
-      creationRequests: rows(this.db, "SELECT * FROM campaign_creation_requests WHERE campaign_id=? ORDER BY created_at,request_id", campaignId),
-    };
+    if (this.db.isTransaction) throw new Error("ARCHIVE_READ_TRANSACTION_CONFLICT");
+    this.db.exec("BEGIN");
+    try {
+      const campaign = this.db.prepare("SELECT * FROM campaigns WHERE id=?").get(campaignId) as CampaignSqlRow | undefined;
+      if (!campaign) throw new Error("CAMPAIGN_NOT_FOUND");
+      const snapshot = {
+        campaign: campaignRow(campaign),
+        branches: rows(this.db, "SELECT * FROM branches WHERE campaign_id=? ORDER BY created_at,id", campaignId),
+        turns: rows(this.db, "SELECT * FROM turns WHERE campaign_id=? ORDER BY created_at,id", campaignId),
+        turnEvents: rows(this.db, `SELECT e.* FROM turn_events e JOIN turns t ON t.id=e.turn_id
+          WHERE t.campaign_id=? ORDER BY e.sequence`, campaignId),
+        activeTurns: rows(this.db, "SELECT * FROM active_turns WHERE campaign_id=? ORDER BY turn_id", campaignId),
+        recoveryCommands: rows(this.db, "SELECT * FROM turn_recovery_commands WHERE campaign_id=? ORDER BY created_at,id", campaignId),
+        checkpoints: rows(this.db, "SELECT * FROM checkpoints WHERE campaign_id=? ORDER BY state_version,created_at,id", campaignId),
+        journals: rows(this.db, "SELECT * FROM journals WHERE campaign_id=? ORDER BY state_version,audience", campaignId),
+        creationRequests: rows(this.db, "SELECT * FROM campaign_creation_requests WHERE campaign_id=? ORDER BY created_at,request_id", campaignId),
+      } satisfies CampaignArchiveSnapshot;
+      this.db.exec("COMMIT");
+      return snapshot;
+    } catch (error) {
+      if (this.db.isTransaction) this.db.exec("ROLLBACK");
+      throw error;
+    }
   }
 
   assertEmptyForRestore(campaignId: CampaignId): void {
@@ -107,6 +135,7 @@ class SqliteCampaignArchiveRepository implements CampaignArchiveRepository {
   }
 
   restoreCampaign(snapshot: CampaignArchiveSnapshot): void {
+    const branches = parentFirstBranches(snapshot.branches);
     this.db.exec("BEGIN IMMEDIATE");
     try {
       this.assertEmptyForRestore(snapshot.campaign.id);
@@ -120,7 +149,7 @@ class SqliteCampaignArchiveRepository implements CampaignArchiveRepository {
         campaign.currentStateJson, campaign.currentStateHash, campaign.currentDecisionJson, campaign.activeBranchId,
         campaign.status, campaign.createdAt, campaign.updatedAt,
       );
-      insertRows(this.db, "branches", snapshot.branches);
+      insertRows(this.db, "branches", branches);
       insertRows(this.db, "turns", snapshot.turns);
       insertRows(this.db, "turn_events", snapshot.turnEvents);
       insertRows(this.db, "active_turns", snapshot.activeTurns);

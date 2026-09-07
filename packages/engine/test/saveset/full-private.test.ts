@@ -13,6 +13,8 @@ describe("FULL_PRIVATE SaveSet restore", () => {
       installRichState(source.db, "saveset_full_restore");
       const rewind = createRewindLineage(source.db, "saveset_full_restore");
       commitPostRewindTurn(source.db, "saveset_full_restore");
+      source.db.prepare("UPDATE branches SET created_at=? WHERE campaign_id=?")
+        .run("2026-09-07T12:00:00.000Z", seeded.campaignId);
       const sourceArchive = createCampaignArchiveRepository(source.db);
       const before = sourceArchive.readCampaign(seeded.campaignId);
       const exported = exportSaveSet({ repository: sourceArchive, campaignId: seeded.campaignId,
@@ -36,7 +38,7 @@ describe("FULL_PRIVATE SaveSet restore", () => {
       expect(before.turns).toHaveLength(2);
       expect(before.turnEvents).toHaveLength(2);
       expect(before.branches).toHaveLength(2);
-      expect(before.branches[1]).toMatchObject({
+      expect(before.branches.find((branch) => branch.id === rewind.activeBranchId)).toMatchObject({
         parent_branch_id: seeded.rootBranchId,
         fork_turn_id: `test_turn_rewind_saveset_full_restore`,
       });

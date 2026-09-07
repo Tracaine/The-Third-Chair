@@ -81,10 +81,11 @@ export function exportCampaign(
   mkdirSync(deps.exportDirectory, { recursive: true });
   const finalPath = join(deps.exportDirectory, `${exportId}.zip`);
   const temporaryPath = join(deps.exportDirectory, `.${exportId}.${randomUUID()}.tmp`);
+  let publishedRecord: ExportRecord | null = null;
   try {
     writeFileSync(temporaryPath, exported.archive, { flag: "wx" });
     renameSync(temporaryPath, finalPath);
-    const record = deps.exports.create({
+    publishedRecord = deps.exports.create({
       id: exportId,
       campaignId: input.campaignId,
       stateVersion: input.expectedStateVersion,
@@ -95,10 +96,16 @@ export function exportCampaign(
       sizeBytes: exported.archive.byteLength,
       expiresAt: new Date(now.getTime() + EXPORT_TTL_MS).toISOString(),
     });
-    return result(record);
+    return result(publishedRecord);
   } catch (error) {
     rmSync(temporaryPath, { force: true });
+    if (publishedRecord !== null) throw error;
+    const winner = deps.exports.findByRequest(input.campaignId, input.requestId);
     rmSync(finalPath, { force: true });
+    if (winner !== null) {
+      if (!matching(winner, input)) throw new Error("EXPORT_IDEMPOTENCY_CONFLICT");
+      return result(winner);
+    }
     throw error;
   }
 }

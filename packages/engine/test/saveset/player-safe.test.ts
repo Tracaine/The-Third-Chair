@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { extractSaveSetZip, exportSaveSet } from "@third-chair/engine";
-import { createCampaignArchiveRepository } from "@third-chair/storage";
+import { createCampaignArchiveRepository, hashStoredState } from "@third-chair/storage";
 import { createTempDatabase, seedCampaign } from "@third-chair/storage/test/fixtures";
-import { HIDDEN_SENTINEL, installRichState } from "./fixtures.js";
+import { createRewindLineage, HIDDEN_SENTINEL, installRichState } from "./fixtures.js";
 
 const decoder = new TextDecoder();
 
@@ -57,6 +57,29 @@ describe("PLAYER_SAFE SaveSet export", () => {
         repository: createCampaignArchiveRepository(temp.db), campaignId: seeded.campaignId,
         expectedStateVersion: 0, mode: "PLAYER_SAFE",
       })).toThrow("SAVESET_STATE_HASH_MISMATCH");
+    } finally {
+      temp.close(); temp.cleanup();
+    }
+  });
+
+  it("carries forward visible summaries when rewind advances beyond the latest journal row", () => {
+    const temp = createTempDatabase();
+    try {
+      const seeded = seedCampaign(temp.db, "saveset_after_rewind");
+      installRichState(temp.db, "saveset_after_rewind");
+      const row = temp.db.prepare("SELECT journal_json FROM journals WHERE campaign_id=? AND audience='BILL'")
+        .get(seeded.campaignId) as { journal_json: string };
+      const journal = JSON.parse(row.journal_json);
+      journal.recentTurns = [{ turnId: "test_turn_visible_before_rewind", stateVersion: 0,
+        narrationExcerpt: "A visible moment before the rewind.", visibleResolutionIds: [] }];
+      temp.db.prepare("UPDATE journals SET journal_json=?,journal_hash=? WHERE campaign_id=? AND audience='BILL'")
+        .run(JSON.stringify(journal), hashStoredState(journal), seeded.campaignId);
+      createRewindLineage(temp.db, "saveset_after_rewind");
+
+      const exported = exportSaveSet({ repository: createCampaignArchiveRepository(temp.db),
+        campaignId: seeded.campaignId, expectedStateVersion: 1, mode: "PLAYER_SAFE" });
+      const members = extractSaveSetZip({ mode: "PLAYER_SAFE", archive: exported.archive });
+      expect(JSON.parse(decoder.decode(members["visible-turn-summaries.json"]))).toEqual(journal.recentTurns);
     } finally {
       temp.close(); temp.cleanup();
     }

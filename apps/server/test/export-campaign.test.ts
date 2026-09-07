@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { copyFileSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -108,6 +108,43 @@ describe("export_campaign", () => {
       expect(temp.db.prepare("SELECT COUNT(*) AS count FROM exports").get()).toEqual({ count: 1 });
       expect(() => exportCampaign(deps, { ...input, mode: "FULL_PRIVATE", confirmedSpoilers: true }))
         .toThrow("EXPORT_IDEMPOTENCY_CONFLICT");
+    } finally {
+      temp.close(); temp.cleanup();
+    }
+  });
+
+  it("returns the winning export when matching duplicate requests race", () => {
+    const temp = createTempDatabase();
+    try {
+      const seeded = seedCampaign(temp.db, "mcp_export_race");
+      installRichState(temp.db, "mcp_export_race");
+      const stored = createExportRepository(temp.db);
+      const exportDirectory = join(temp.directory, "exports");
+      const winnerPath = join(exportDirectory, "test_export_race_winner.zip");
+      const racing = {
+        get: stored.get.bind(stored),
+        findByRequest: stored.findByRequest.bind(stored),
+        create: (input: Parameters<typeof stored.create>[0]) => {
+          copyFileSync(input.path, winnerPath);
+          stored.create({ ...input, id: "test_export_race_winner", path: winnerPath });
+          throw new Error("UNIQUE constraint failed: exports.campaign_id, exports.request_id");
+        },
+      };
+      const result = exportCampaign({
+        archives: createCampaignArchiveRepository(temp.db), exports: racing,
+        exportDirectory, newExportId: () => "test_export_race_loser",
+        now: () => new Date("2026-09-07T14:00:00.000Z"),
+      }, {
+        campaignId: seeded.campaignId,
+        expectedStateVersion: 0,
+        requestId: "test_request_mcp_export_race",
+        mode: "PLAYER_SAFE",
+        confirmedSpoilers: false,
+      });
+
+      expect(result.structuredContent).toMatchObject({ exportId: "test_export_race_winner" });
+      expect(existsSync(winnerPath)).toBe(true);
+      expect(existsSync(join(exportDirectory, "test_export_race_loser.zip"))).toBe(false);
     } finally {
       temp.close(); temp.cleanup();
     }

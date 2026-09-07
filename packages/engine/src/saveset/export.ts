@@ -56,12 +56,16 @@ function parseState(snapshot: CampaignArchiveSnapshot): WorldState {
 }
 
 function latestBillJournal(snapshot: CampaignArchiveSnapshot, state: WorldState): PlayerJournal {
-  const row = [...snapshot.journals]
-    .reverse()
-    .find((candidate) => candidate.audience === "BILL" && candidate.state_version === state.metadata.stateVersion);
-  return row === undefined
-    ? buildPlayerJournal(projectPlayerView(state, "BILL"), [])
-    : JSON.parse(String(row.journal_json)) as PlayerJournal;
+  const candidates = [...snapshot.journals]
+    .filter((candidate) => candidate.audience === "BILL" && typeof candidate.state_version === "number"
+      && candidate.state_version <= state.metadata.stateVersion)
+    .reverse();
+  const row = candidates[0];
+  if (row === undefined) return buildPlayerJournal(projectPlayerView(state, "BILL"), []);
+  const stored = JSON.parse(String(row.journal_json)) as PlayerJournal;
+  return row.state_version === state.metadata.stateVersion
+    ? stored
+    : buildPlayerJournal(projectPlayerView(state, "BILL"), stored.recentTurns);
 }
 
 function playerCharacters(actors: readonly PlayerActorView[]): readonly PlayerActorView[] {
