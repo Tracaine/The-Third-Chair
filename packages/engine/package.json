@@ -2,7 +2,16 @@
   "name": "@third-chair/engine",
   "version": "0.1.0",
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
-  "dependencies": { "@third-chair/contracts": "*", "@third-chair/storage": "*" },
-  "scripts": { "typecheck": "tsc --noEmit -p tsconfig.json", "build": "tsc -b tsconfig.build.json" }
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@third-chair/contracts": "*",
+    "@third-chair/storage": "*",
+    "fflate": "^0.8.3"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "tsc -b tsconfig.build.json"
+  }
 }

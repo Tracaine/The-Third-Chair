@@ -20,3 +20,5 @@ export * from "./checkpoints/create.js";
 export * from "./checkpoints/rewind.js";
 export * from "./journal/build-journal.js";
 export * from "./journal/render-markdown.js";
+export * from "./saveset/manifest.js";
+export * from "./saveset/zip.js";
