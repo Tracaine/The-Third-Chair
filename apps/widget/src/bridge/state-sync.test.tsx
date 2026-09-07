@@ -9,6 +9,7 @@ function fakeBridge() {
   const bridge: McpTableBridge = {
     connect: vi.fn(async (next) => { listener = next; return () => { listener = undefined; }; }),
     callTool: vi.fn(async () => ({ content: [] })),
+    downloadFile: vi.fn(async () => ({})),
   };
   return { bridge, emit: (value: unknown) => listener?.(value) };
 }

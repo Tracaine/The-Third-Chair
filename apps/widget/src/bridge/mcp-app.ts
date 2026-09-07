@@ -6,6 +6,15 @@ export interface ToolCallResult {
   readonly isError?: boolean;
 }
 
+export interface DownloadableResourceLink {
+  readonly type: "resource_link";
+  readonly name: string;
+  readonly uri: string;
+  readonly description?: string;
+  readonly mimeType?: string;
+  readonly size?: number;
+}
+
 type ToolResultListener = (params: { structuredContent?: Record<string, unknown> }) => void;
 
 export interface AppClient {
@@ -13,11 +22,13 @@ export interface AppClient {
   removeEventListener(name: "toolresult", callback: ToolResultListener): void;
   connect(): Promise<unknown>;
   callServerTool(params: { name: string; arguments?: Record<string, unknown> }): Promise<ToolCallResult>;
+  downloadFile(params: { contents: DownloadableResourceLink[] }): Promise<ToolCallResult>;
 }
 
 export interface McpTableBridge {
   connect(onResult: (value: unknown) => void): Promise<() => void>;
   callTool(name: string, args: Record<string, unknown>): Promise<ToolCallResult>;
+  downloadFile(resource: DownloadableResourceLink): Promise<ToolCallResult>;
 }
 
 export function createMcpTableBridge(client: AppClient): McpTableBridge {
@@ -35,6 +46,9 @@ export function createMcpTableBridge(client: AppClient): McpTableBridge {
     },
     callTool(name, args) {
       return client.callServerTool({ name, arguments: args });
+    },
+    downloadFile(resource) {
+      return client.downloadFile({ contents: [resource] });
     },
   };
 }

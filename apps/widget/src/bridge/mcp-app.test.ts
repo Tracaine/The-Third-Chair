@@ -10,6 +10,7 @@ describe("MCP Apps bridge", () => {
       removeEventListener: vi.fn(),
       connect: vi.fn(async () => { order.push("connect"); }),
       callServerTool: vi.fn(async () => ({ content: [], structuredContent: { ok: true } })),
+      downloadFile: vi.fn(async () => ({})),
     };
     const bridge = createMcpTableBridge(client);
     const onResult = vi.fn();
@@ -19,6 +20,9 @@ describe("MCP Apps bridge", () => {
     listener?.({ structuredContent: { serverStatus: "READY" } });
     expect(onResult).toHaveBeenCalledWith({ serverStatus: "READY" });
     await expect(bridge.callTool("get_table_view", { campaignId: "test_campaign" })).resolves.toMatchObject({ structuredContent: { ok: true } });
+    const resource = { type: "resource_link" as const, name: "save.zip", uri: "third-chair://exports/test_export" };
+    await expect(bridge.downloadFile(resource)).resolves.toEqual({});
+    expect(client.downloadFile).toHaveBeenCalledWith({ contents: [resource] });
     disconnect();
     expect(client.removeEventListener).toHaveBeenCalledWith("toolresult", expect.any(Function));
   });

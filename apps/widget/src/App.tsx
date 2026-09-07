@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CharacterCard } from "./components/CharacterCard";
 import { ClueThreads } from "./components/ClueThreads";
 import { CombatPanel } from "./components/CombatPanel";
@@ -27,21 +27,45 @@ export function App({ view: initialView = explorationFixture, bridge: providedBr
   const view = state.view;
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState(false);
+  const refreshInFlight = useRef<Promise<void> | undefined>(undefined);
+  const refreshQueued = useRef(false);
   const actorNames = actorNameMap(view.playerView);
 
   useEffect(applyHostPresentation, []);
 
   const refresh = async () => {
-    if (!bridge || refreshing) return;
-    setRefreshing(true);
-    setRefreshError(false);
+    if (!bridge) return;
+    if (refreshInFlight.current) {
+      refreshQueued.current = true;
+      await refreshInFlight.current;
+      return;
+    }
+
+    const run = async () => {
+      setRefreshing(true);
+      setRefreshError(false);
+      try {
+        do {
+          refreshQueued.current = false;
+          try {
+            const next = await refreshTable(view, (name, args) => bridge.callTool(name, args));
+            if (next) state.accept(next);
+            setRefreshError(false);
+          } catch {
+            setRefreshError(true);
+          }
+        } while (refreshQueued.current);
+      } finally {
+        setRefreshing(false);
+      }
+    };
+
+    const operation = run();
+    refreshInFlight.current = operation;
     try {
-      const next = await refreshTable(view, (name, args) => bridge.callTool(name, args));
-      if (next) state.accept(next);
-    } catch {
-      setRefreshError(true);
+      await operation;
     } finally {
-      setRefreshing(false);
+      if (refreshInFlight.current === operation) refreshInFlight.current = undefined;
     }
   };
 

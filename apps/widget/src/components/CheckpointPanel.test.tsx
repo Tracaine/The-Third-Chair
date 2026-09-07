@@ -1,14 +1,22 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { App } from "../App";
-import type { McpTableBridge, ToolCallResult } from "../bridge/mcp-app";
+import type { DownloadableResourceLink, McpTableBridge, ToolCallResult } from "../bridge/mcp-app";
 import type { TableViewModel } from "../contracts";
 import { explorationFixture } from "../fixtures/table-view";
 
 type Call = { readonly name: string; readonly args: Record<string, unknown> };
 
-function lifecycleBridge() {
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((complete) => { resolve = complete; });
+  return { promise, resolve };
+}
+
+function lifecycleBridge(options: { readonly secondTableView?: Promise<ToolCallResult> } = {}) {
   const calls: Call[] = [];
+  const downloads: DownloadableResourceLink[] = [];
+  let tableViewCalls = 0;
   let current: TableViewModel = {
     playerViewId: explorationFixture.playerViewId,
     audience: explorationFixture.audience,
@@ -19,6 +27,10 @@ function lifecycleBridge() {
   };
   const bridge: McpTableBridge = {
     async connect() { return () => undefined; },
+    async downloadFile(resource) {
+      downloads.push(resource);
+      return {};
+    },
     async callTool(name, args): Promise<ToolCallResult> {
       calls.push({ name, args });
       if (name === "create_checkpoint") {
@@ -59,21 +71,36 @@ function lifecycleBridge() {
         } };
       }
       if (name === "get_table_view") {
+        tableViewCalls += 1;
+        if (tableViewCalls === 2 && options.secondTableView) return options.secondTableView;
         return { structuredContent: { playerViewId: current.playerViewId, view: current.playerView } };
       }
       if (name === "render_table") return { structuredContent: current };
-      if (name === "export_campaign") return { structuredContent: {
-        exportId: "test_export_widget",
-        uri: "third-chair://exports/test_export_widget",
-        mimeType: "application/zip",
-        sizeBytes: 100,
-        sha256: "c".repeat(64),
-        expiresAt: "2026-08-28T12:15:00.000Z",
-      } };
+      if (name === "export_campaign") return {
+        content: [
+          { type: "text", text: `${String(args.mode)} SaveSet exported (100 bytes).` },
+          {
+            type: "resource_link",
+            name: "third-chair-test_export_widget.zip",
+            uri: "third-chair://exports/test_export_widget",
+            description: `Expiring ${String(args.mode)} campaign SaveSet`,
+            mimeType: "application/zip",
+            size: 100,
+          },
+        ],
+        structuredContent: {
+          exportId: "test_export_widget",
+          uri: "third-chair://exports/test_export_widget",
+          mimeType: "application/zip",
+          sizeBytes: 100,
+          sha256: "c".repeat(64),
+          expiresAt: "2026-08-28T12:15:00.000Z",
+        },
+      };
       throw new Error(`UNEXPECTED_TOOL:${name}`);
     },
   };
-  return { bridge, calls };
+  return { bridge, calls, downloads };
 }
 
 describe("checkpoint and campaign lifecycle controls", () => {
@@ -146,5 +173,79 @@ describe("checkpoint and campaign lifecycle controls", () => {
     expect(calls.map(({ name }) => name)).toEqual([
       "export_campaign", "get_table_view", "export_campaign", "get_table_view",
     ]);
+  });
+
+  it("contains modal focus, closes on Escape, and restores focus to the rewind trigger", async () => {
+    const { bridge } = lifecycleBridge();
+    render(<App view={explorationFixture} bridge={bridge} />);
+    fireEvent.change(screen.getByLabelText("Checkpoint label"), { target: { value: "Before opening the vault" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create checkpoint" }));
+
+    const trigger = await screen.findByRole("button", { name: "Rewind to Before opening the vault" });
+    trigger.focus();
+    fireEvent.click(trigger);
+    const dialog = screen.getByRole("dialog", { name: "Confirm campaign rewind" });
+    const confirm = within(dialog).getByRole("button", { name: "Confirm rewind" });
+    const cancel = within(dialog).getByRole("button", { name: "Cancel" });
+
+    await waitFor(() => expect(confirm).toHaveFocus());
+    expect(screen.getByTestId("table-shell")).toHaveAttribute("inert");
+    cancel.focus();
+    fireEvent.keyDown(dialog, { key: "Tab" });
+    expect(confirm).toHaveFocus();
+    fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true });
+    expect(cancel).toHaveFocus();
+
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Confirm campaign rewind" })).not.toBeInTheDocument());
+    expect(screen.getByTestId("table-shell")).not.toHaveAttribute("inert");
+    expect(trigger).toHaveFocus();
+
+    fireEvent.click(trigger);
+    const reopened = screen.getByRole("dialog", { name: "Confirm campaign rewind" });
+    fireEvent.click(within(reopened).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Confirm campaign rewind" })).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+  });
+
+  it("queues a post-rewind refresh when a manual refresh is already in flight", async () => {
+    const firstRefresh = deferred<ToolCallResult>();
+    const { bridge, calls } = lifecycleBridge({ secondTableView: firstRefresh.promise });
+    render(<App view={explorationFixture} bridge={bridge} />);
+    fireEvent.change(screen.getByLabelText("Checkpoint label"), { target: { value: "Before opening the vault" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create checkpoint" }));
+    const rewindTrigger = await screen.findByRole("button", { name: "Rewind to Before opening the vault" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Refresh table" }));
+    await waitFor(() => expect(calls.filter(({ name }) => name === "get_table_view")).toHaveLength(2));
+    fireEvent.click(rewindTrigger);
+    fireEvent.click(screen.getByRole("button", { name: "Confirm rewind" }));
+    await waitFor(() => expect(calls.some(({ name }) => name === "rewind_to_checkpoint")).toBe(true));
+
+    firstRefresh.resolve({ structuredContent: {
+      playerViewId: explorationFixture.playerViewId,
+      view: explorationFixture.playerView,
+    } });
+    await waitFor(() => expect(calls.filter(({ name }) => name === "get_table_view")).toHaveLength(3));
+    await waitFor(() => expect(screen.getByText("State 13")).toBeInTheDocument());
+  });
+
+  it("renders the returned export resource as an accessible archive action", async () => {
+    const { bridge, downloads } = lifecycleBridge();
+    render(<App view={explorationFixture} bridge={bridge} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Export player-safe SaveSet" }));
+
+    const archive = await screen.findByRole("button", { name: "Download player-safe SaveSet" });
+    expect(screen.getByText("100 bytes · expires 28 Aug 2026, 12:15 UTC")).toBeInTheDocument();
+    fireEvent.click(archive);
+    await waitFor(() => expect(downloads).toEqual([{
+      type: "resource_link",
+      name: "third-chair-test_export_widget.zip",
+      uri: "third-chair://exports/test_export_widget",
+      description: "Expiring PLAYER_SAFE campaign SaveSet",
+      mimeType: "application/zip",
+      size: 100,
+    }]));
   });
 });

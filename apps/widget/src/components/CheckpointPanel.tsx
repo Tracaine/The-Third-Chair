@@ -1,11 +1,14 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type MouseEvent } from "react";
 import {
   CreateCheckpointOutputSchema,
+  ExportCampaignOutputSchema,
   type CheckpointSummary,
+  type ExportCampaignOutput,
   type SaveSetMode,
 } from "@third-chair/contracts";
-import type { McpTableBridge } from "../bridge/mcp-app";
+import type { DownloadableResourceLink, McpTableBridge } from "../bridge/mcp-app";
 import type { TableViewModel } from "../contracts";
+import { ConfirmationDialog } from "./ConfirmationDialog";
 
 interface CheckpointPanelProps {
   readonly view: TableViewModel;
@@ -15,8 +18,42 @@ interface CheckpointPanelProps {
 }
 
 type PendingConfirmation =
-  | { readonly kind: "REWIND"; readonly checkpoint: CheckpointSummary }
-  | { readonly kind: "FULL_PRIVATE_EXPORT" };
+  | { readonly kind: "REWIND"; readonly checkpoint: CheckpointSummary; readonly returnFocus: HTMLElement }
+  | { readonly kind: "FULL_PRIVATE_EXPORT"; readonly returnFocus: HTMLElement };
+
+interface AvailableArchive extends ExportCampaignOutput {
+  readonly mode: SaveSetMode;
+  readonly resource: DownloadableResourceLink;
+}
+
+function downloadableResource(value: unknown, output: ExportCampaignOutput): DownloadableResourceLink | undefined {
+  if (typeof value !== "object" || value === null) return undefined;
+  const candidate = value as Record<string, unknown>;
+  if (candidate.type !== "resource_link"
+    || typeof candidate.name !== "string"
+    || candidate.name.length === 0
+    || candidate.uri !== output.uri
+    || candidate.mimeType !== output.mimeType
+    || candidate.size !== output.sizeBytes) return undefined;
+  if (candidate.description !== undefined && typeof candidate.description !== "string") return undefined;
+  return {
+    type: "resource_link",
+    name: candidate.name,
+    uri: output.uri,
+    ...(candidate.description === undefined ? {} : { description: candidate.description }),
+    mimeType: output.mimeType,
+    size: output.sizeBytes,
+  };
+}
+
+function formatExpiry(value: string): string {
+  const date = new Date(value);
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const hour = String(date.getUTCHours()).padStart(2, "0");
+  const minute = String(date.getUTCMinutes()).padStart(2, "0");
+  return `${day} ${months[date.getUTCMonth()]} ${date.getUTCFullYear()}, ${hour}:${minute} UTC`;
+}
 
 function defaultRequestId(): string {
   return crypto.randomUUID();
@@ -31,11 +68,13 @@ export function CheckpointPanel({
   const [label, setLabel] = useState("");
   const [checkpoints, setCheckpoints] = useState<readonly CheckpointSummary[]>([]);
   const [confirmation, setConfirmation] = useState<PendingConfirmation>();
+  const [archives, setArchives] = useState<readonly AvailableArchive[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(false);
 
   useEffect(() => {
     setCheckpoints([]);
+    setArchives([]);
     setConfirmation(undefined);
   }, [view.playerView.campaignId]);
 
@@ -95,15 +134,36 @@ export function CheckpointPanel({
 
   const exportCampaign = (mode: SaveSetMode) => {
     void execute(async () => {
-      await call("export_campaign", {
+      const result = await call("export_campaign", {
         campaignId: view.playerView.campaignId,
         expectedStateVersion: view.playerView.stateVersion,
         requestId: newRequestId(),
         mode,
         confirmedSpoilers: mode === "FULL_PRIVATE",
       });
+      const output = ExportCampaignOutputSchema.parse(result.structuredContent);
+      const resource = result.content
+        ?.map((item) => downloadableResource(item, output))
+        .find((item): item is DownloadableResourceLink => item !== undefined);
+      if (!resource) throw new Error("EXPORT_RESOURCE_UNAVAILABLE");
+      setArchives((current) => [
+        ...current.filter(({ exportId }) => exportId !== output.exportId),
+        { ...output, mode, resource },
+      ]);
       setConfirmation(undefined);
     });
+  };
+
+  const downloadArchive = (archive: AvailableArchive) => {
+    if (!bridge || pending) return;
+    setPending(true);
+    setError(false);
+    void bridge.downloadFile(archive.resource)
+      .then((result) => {
+        if (result.isError) throw new Error("EXPORT_DOWNLOAD_FAILED");
+      })
+      .catch(() => setError(true))
+      .finally(() => setPending(false));
   };
 
   return (
@@ -139,7 +199,11 @@ export function CheckpointPanel({
                 type="button"
                 disabled={!bridge || pending}
                 aria-label={`Rewind to ${checkpoint.label}`}
-                onClick={() => setConfirmation({ kind: "REWIND", checkpoint })}
+                onClick={(event: MouseEvent<HTMLButtonElement>) => setConfirmation({
+                  kind: "REWIND",
+                  checkpoint,
+                  returnFocus: event.currentTarget,
+                })}
               >Rewind</button>
             </li>
           ))}
@@ -153,14 +217,40 @@ export function CheckpointPanel({
         <button
           type="button"
           disabled={!bridge || pending}
-          onClick={() => setConfirmation({ kind: "FULL_PRIVATE_EXPORT" })}
+          onClick={(event: MouseEvent<HTMLButtonElement>) => setConfirmation({
+            kind: "FULL_PRIVATE_EXPORT",
+            returnFocus: event.currentTarget,
+          })}
         >Export full-private SaveSet</button>
       </div>
+
+      {archives.length > 0 ? (
+        <section className="available-archives" aria-labelledby="available-archives-heading">
+          <h3 id="available-archives-heading">Available archives</h3>
+          <ul>
+            {archives.map((archive) => (
+              <li key={archive.exportId}>
+                <button
+                  type="button"
+                  disabled={!bridge || pending}
+                  aria-label={`Download ${archive.mode === "PLAYER_SAFE" ? "player-safe" : "full-private"} SaveSet`}
+                  onClick={() => downloadArchive(archive)}
+                >{archive.resource.name}</button>
+                <small>{archive.sizeBytes} bytes · expires {formatExpiry(archive.expiresAt)}</small>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {error ? <p role="alert">Campaign control unavailable. Refresh the table before trying again.</p> : null}
 
       {confirmation?.kind === "REWIND" ? (
-        <div className="confirmation-panel" role="dialog" aria-modal="true" aria-labelledby="rewind-confirmation-heading">
+        <ConfirmationDialog
+          labelledBy="rewind-confirmation-heading"
+          onClose={() => setConfirmation(undefined)}
+          returnFocus={confirmation.returnFocus}
+        >
           <h3 id="rewind-confirmation-heading">Confirm campaign rewind</h3>
           <p><strong>{confirmation.checkpoint.label}</strong></p>
           <p>State {confirmation.checkpoint.stateVersion}</p>
@@ -169,18 +259,22 @@ export function CheckpointPanel({
             <button type="button" disabled={pending} onClick={() => rewind(confirmation.checkpoint)}>Confirm rewind</button>
             <button type="button" disabled={pending} onClick={() => setConfirmation(undefined)}>Cancel</button>
           </div>
-        </div>
+        </ConfirmationDialog>
       ) : null}
 
       {confirmation?.kind === "FULL_PRIVATE_EXPORT" ? (
-        <div className="confirmation-panel" role="dialog" aria-modal="true" aria-labelledby="export-confirmation-heading">
+        <ConfirmationDialog
+          labelledBy="export-confirmation-heading"
+          onClose={() => setConfirmation(undefined)}
+          returnFocus={confirmation.returnFocus}
+        >
           <h3 id="export-confirmation-heading">Confirm spoiler-bearing export</h3>
           <p>This SaveSet contains hidden campaign truth, Director state, checkpoints, and branch history.</p>
           <div>
             <button type="button" disabled={pending} onClick={() => exportCampaign("FULL_PRIVATE")}>Export with spoilers</button>
             <button type="button" disabled={pending} onClick={() => setConfirmation(undefined)}>Cancel</button>
           </div>
-        </div>
+        </ConfirmationDialog>
       ) : null}
     </section>
   );
