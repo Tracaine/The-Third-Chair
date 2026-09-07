@@ -5,6 +5,7 @@ import {
   ResolutionPlanSchema,
   TurnProposalSchema,
   WorldStateSchema,
+  PlayerJournalSchema,
   validateIntentsForDecision,
 } from "@third-chair/contracts";
 import type { DatabaseSync } from "node:sqlite";
@@ -26,6 +27,7 @@ import type {
   TurnStatus,
 } from "./types.js";
 import { insertCheckpointSnapshot } from "./checkpoint-repository.js";
+import { hashStoredState } from "./state-hash.js";
 
 interface TurnRow {
   id: string;
@@ -389,6 +391,13 @@ class SqliteTurnRepository implements TurnRepository {
     const nextDecision = DecisionRequestSchema.parse(input.nextDecision);
     const committedAt = input.committedAt ?? new Date().toISOString();
     if (input.candidateStateHash.length === 0) throw new Error("STATE_HASH_REQUIRED");
+    const journals = (input.journals ?? []).map((journal) => PlayerJournalSchema.parse(journal));
+    if (journals.length !== 0) {
+      const audiences = new Set(journals.map(({ audience }) => audience));
+      if (journals.length !== 3 || audiences.size !== 3 || !audiences.has("BILL") || !audiences.has("RAVEN") || !audiences.has("PARTY")) {
+        throw new Error("JOURNAL_AUDIENCES_INCOMPLETE");
+      }
+    }
 
     this.db.exec("BEGIN IMMEDIATE");
     try {
@@ -460,6 +469,10 @@ class SqliteTurnRepository implements TurnRepository {
       if (JSON.stringify(candidate.currentDecision) !== JSON.stringify(nextDecision)) {
         throw new Error("NEXT_DECISION_MISMATCH");
       }
+      for (const journal of journals) {
+        if (journal.campaignId !== turn.campaignId) throw new Error("JOURNAL_CAMPAIGN_MISMATCH");
+        if (journal.stateVersion !== committedVersion) throw new Error("JOURNAL_VERSION_MISMATCH");
+      }
 
       if (input.automaticCheckpoint !== undefined) {
         insertCheckpointSnapshot(this.db, {
@@ -472,6 +485,15 @@ class SqliteTurnRepository implements TurnRepository {
           rngCounter: beforeState.metadata.rngCounter,
           createdAt: committedAt,
         });
+      }
+
+      for (const journal of journals) {
+        this.db.prepare(`INSERT INTO journals(
+          campaign_id, state_version, audience, journal_json, journal_hash, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?)`).run(
+          journal.campaignId, journal.stateVersion, journal.audience, JSON.stringify(journal),
+          hashStoredState(journal), committedAt,
+        );
       }
 
       const updatedCampaign = this.db.prepare(`

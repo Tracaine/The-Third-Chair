@@ -2,6 +2,7 @@ export * from "./backup.js";
 export * from "./campaign-repository.js";
 export * from "./campaign-creation-repository.js";
 export * from "./checkpoint-repository.js";
+export * from "./journal-repository.js";
 export * from "./database.js";
 export * from "./migrations.js";
 export * from "./turn-repository.js";

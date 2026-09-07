@@ -18,3 +18,5 @@ export * from "./creation/campaign-builder.js";
 export * from "./checkpoints/policy.js";
 export * from "./checkpoints/create.js";
 export * from "./checkpoints/rewind.js";
+export * from "./journal/build-journal.js";
+export * from "./journal/render-markdown.js";

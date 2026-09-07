@@ -14,6 +14,7 @@ const actor = (
   controller,
   name,
   level: 3,
+  experiencePoints: 900,
   abilities: {
     strength: controller === "BILL" ? 16 : 8,
     dexterity: controller === "RAVEN" ? 16 : 12,
@@ -67,6 +68,7 @@ const visibleCheck: VisibleCheck = {
 
 const baseView: PlayerView = {
   campaignId: "test_campaign_lantern",
+  audience: "BILL",
   stateVersion: 12,
   worldDate: { yearDr: 1375, month: "Mirtul", day: 14 },
   location: {
@@ -99,6 +101,7 @@ const baseView: PlayerView = {
       facts: [{ id: "test_thread_watch_fact", kind: "Lead", text: "Ask at the Bent Nail after midnight." }],
     },
   ],
+  acceptedRulings: [],
   combat: null,
   currentDecision: {
     id: "test_decision_cellar_escape",

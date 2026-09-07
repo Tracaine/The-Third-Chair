@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { DecisionModeSchema } from "./decisions.js";
 import { DecisionOwnerSchema, PersistedIdSchema, PlayerSeatSchema } from "./ids.js";
+import { JournalAudienceSchema } from "./journal.js";
 
 const VisibleTextSchema = z.string().trim().max(2_000);
 const BoundedNameSchema = z.string().trim().min(1).max(200);
@@ -23,6 +24,7 @@ export const PlayerActorViewSchema = z.object({
   controller: PlayerSeatSchema,
   name: BoundedNameSchema,
   level: z.number().int().positive().max(20),
+  experiencePoints: NonnegativeIntSchema,
   abilities: z.object({
     strength: z.number().int(), dexterity: z.number().int(), constitution: z.number().int(),
     intelligence: z.number().int(), wisdom: z.number().int(), charisma: z.number().int(),
@@ -50,6 +52,7 @@ const VisibleEntitySchema = z.object({
 
 export const PlayerViewSchema = z.object({
   campaignId: PersistedIdSchema,
+  audience: JournalAudienceSchema,
   stateVersion: NonnegativeIntSchema,
   worldDate: z.object({ yearDr: z.number().int(), month: z.string(), day: z.number().int().positive() }).strict(),
   location: VisibleEntitySchema,
@@ -67,6 +70,10 @@ export const PlayerViewSchema = z.object({
     id: PersistedIdSchema, name: BoundedNameSchema, status: BoundedNameSchema, current: NonnegativeIntSchema, maximum: z.number().int().positive(), facts: z.array(VisibleFactSchema),
   }).strict()),
   openThreads: z.array(VisibleEntitySchema),
+  acceptedRulings: z.array(z.object({
+    id: PersistedIdSchema, title: VisibleTextSchema, text: VisibleTextSchema,
+    acceptedAtTurn: z.number().int().nonnegative(),
+  }).strict()),
   combat: z.object({
     id: PersistedIdSchema, round: z.number().int().positive(), currentActorId: PersistedIdSchema.nullable(), initiativeOrder: z.array(PersistedIdSchema), facts: z.array(VisibleFactSchema),
   }).strict().nullable(),

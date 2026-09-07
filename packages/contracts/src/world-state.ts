@@ -29,6 +29,7 @@ export const ActorStateSchema = z.object({
   controller: SeatSchema,
   name: BoundedNameSchema,
   level: z.number().int().positive().max(20),
+  experiencePoints: NonnegativeIntSchema.optional(),
   classSourceKey: BoundedNameSchema,
   ancestrySourceKey: BoundedNameSchema,
   backgroundSourceKey: BoundedNameSchema,

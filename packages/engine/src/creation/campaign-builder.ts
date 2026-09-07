@@ -70,6 +70,7 @@ function actor(build: CharacterBuild, equipmentIds: readonly string[]) {
     controller: build.controller,
     name: build.name,
     level: build.level,
+    experiencePoints: 0,
     classSourceKey: build.classSourceKey,
     ancestrySourceKey: build.ancestrySourceKey,
     backgroundSourceKey: build.backgroundSourceKey,

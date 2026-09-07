@@ -1,4 +1,4 @@
-import type { ActorIntent, CheckResolution, DecisionRequest, ResolutionPlan, TurnProposal, WorldState } from "@third-chair/contracts";
+import type { ActorIntent, CheckResolution, DecisionRequest, PlayerJournal, ResolutionPlan, TurnProposal, WorldState } from "@third-chair/contracts";
 
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue =
@@ -219,6 +219,7 @@ export interface CommitTurnInput {
   readonly candidateStateHash: string;
   readonly narration: JsonValue;
   readonly nextDecision: DecisionRequest;
+  readonly journals?: readonly PlayerJournal[];
   readonly automaticCheckpoint?: {
     readonly checkpointId: CheckpointId;
     readonly requestId: string;
@@ -226,6 +227,20 @@ export interface CommitTurnInput {
     readonly reason: Exclude<CheckpointReason, "CAMPAIGN_START" | "NAMED">;
   };
   readonly committedAt?: string;
+}
+
+export interface JournalRecord {
+  readonly campaignId: CampaignId;
+  readonly stateVersion: number;
+  readonly audience: PlayerJournal["audience"];
+  readonly journal: PlayerJournal;
+  readonly journalHash: string;
+  readonly createdAt: string;
+}
+
+export interface JournalRepository {
+  get(campaignId: CampaignId, stateVersion: number, audience: PlayerJournal["audience"]): JournalRecord;
+  listAtVersion(campaignId: CampaignId, stateVersion: number): readonly JournalRecord[];
 }
 
 export type CommittedTurn = TurnRecord & {

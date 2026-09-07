@@ -64,6 +64,7 @@ export function projectPlayerView(state: WorldState, viewer: PlayerSeat): Player
 
   const view = {
     campaignId: state.metadata.campaignId,
+    audience: viewer,
     stateVersion: state.metadata.stateVersion,
     worldDate: {
       yearDr: state.metadata.worldDate.yearDr,
@@ -76,6 +77,7 @@ export function projectPlayerView(state: WorldState, viewer: PlayerSeat): Player
       .filter(([, actor]) => actor.controller !== "DIRECTOR")
       .map(([id, actor]) => ({
         id, controller: actor.controller, name: actor.name, level: actor.level,
+        experiencePoints: actor.experiencePoints ?? 0,
         abilities: {
           strength: actor.abilities.strength, dexterity: actor.abilities.dexterity,
           constitution: actor.abilities.constitution, intelligence: actor.abilities.intelligence,
@@ -110,6 +112,7 @@ export function projectPlayerView(state: WorldState, viewer: PlayerSeat): Player
       id: clock.id, name: clock.name, status: clock.status, current: clock.current, maximum: clock.maximum, facts: visibleFacts(clock.facts, viewer),
     })),
     openThreads: visible(Object.values(state.quests), viewer).map((quest) => entityView(quest, viewer)),
+    acceptedRulings: state.table.houseRules.map((ruling) => ({ ...ruling })),
     combat: state.combat === null ? null : {
       id: state.combat.id,
       round: state.combat.round,
