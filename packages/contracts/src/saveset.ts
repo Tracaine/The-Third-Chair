@@ -115,8 +115,27 @@ export const SaveSetManifestSchema = z.object({
   }
 });
 
+export const ExportCampaignInputSchema = z.object({
+  campaignId: PersistedIdSchema,
+  expectedStateVersion: z.number().int().nonnegative(),
+  requestId: PersistedIdSchema,
+  mode: SaveSetModeSchema,
+  confirmedSpoilers: z.boolean(),
+}).strict();
+
+export const ExportCampaignOutputSchema = z.object({
+  exportId: PersistedIdSchema,
+  uri: z.string().regex(/^third-chair:\/\/exports\/(?:test_[a-z0-9_]+|[0-9a-fA-F-]{36})$/),
+  mimeType: z.literal("application/zip"),
+  sizeBytes: z.number().int().nonnegative(),
+  sha256: Sha256HexSchema,
+  expiresAt: UtcTimestampSchema,
+}).strict();
+
 export type SaveSetMode = z.infer<typeof SaveSetModeSchema>;
 export type SaveSetPayloadMemberPath = z.infer<typeof SaveSetPayloadMemberPathSchema>;
 export type SaveSetArchiveMemberPath = z.infer<typeof SaveSetArchiveMemberPathSchema>;
 export type SaveSetManifestMember = z.infer<typeof SaveSetManifestMemberSchema>;
 export type SaveSetManifest = z.infer<typeof SaveSetManifestSchema>;
+export type ExportCampaignInput = z.infer<typeof ExportCampaignInputSchema>;
+export type ExportCampaignOutput = z.infer<typeof ExportCampaignOutputSchema>;

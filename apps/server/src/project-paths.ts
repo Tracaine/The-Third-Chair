@@ -24,3 +24,4 @@ export const PROJECT_ROOT = findProjectRoot(dirname(fileURLToPath(import.meta.ur
 export const DEFAULT_CAMPAIGN_DATABASE_PATH = resolve(PROJECT_ROOT, "private", "campaigns.sqlite");
 export const DEFAULT_SOURCE_PACK_DATABASE_PATH = resolve(PROJECT_ROOT, "private", "source-pack.sqlite");
 export const DEFAULT_WIDGET_BUILD_PATH = resolve(PROJECT_ROOT, "apps", "widget", "dist", "index.html");
+export const DEFAULT_EXPORT_DIRECTORY = resolve(PROJECT_ROOT, "data", "exports");

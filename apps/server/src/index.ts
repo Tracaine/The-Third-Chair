@@ -12,6 +12,8 @@ export * from "./mcp/tools/answer-rules.js";
 export * from "./mcp/tools/recall-known-lore.js";
 export * from "./mcp/tools/render-table.js";
 export * from "./mcp/widget-resource.js";
+export * from "./mcp/export-resource.js";
+export * from "./mcp/tools/export-campaign.js";
 export * from "./http/app.js";
 export * from "./runtime/model-ports.js";
 export * from "./runtime/fake-source-pack.js";

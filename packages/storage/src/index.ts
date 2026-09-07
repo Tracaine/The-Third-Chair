@@ -8,3 +8,5 @@ export * from "./migrations.js";
 export * from "./turn-repository.js";
 export * from "./state-hash.js";
 export * from "./types.js";
+export * from "./campaign-archive-repository.js";
+export * from "./export-repository.js";

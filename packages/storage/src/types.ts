@@ -278,3 +278,61 @@ export interface TurnRepository {
   findByRequest(campaignId: CampaignId, clientRequestId: ClientRequestId): TurnRecord | null;
   listRecentCommitted(campaignId: CampaignId, limit: number): readonly CommittedTurn[];
 }
+
+export type ArchiveScalar = string | number | null;
+export type ArchiveRow = Readonly<Record<string, ArchiveScalar>>;
+
+export interface ArchiveCampaignRow {
+  readonly id: string;
+  readonly ownerId: string;
+  readonly name: string;
+  readonly sourcePackHash: string;
+  readonly rngSeedBase64: string;
+  readonly stateVersion: number;
+  readonly currentStateJson: string;
+  readonly currentStateHash: string;
+  readonly currentDecisionJson: string;
+  readonly activeBranchId: string;
+  readonly status: CampaignStatus;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface CampaignArchiveSnapshot {
+  readonly campaign: ArchiveCampaignRow;
+  readonly branches: readonly ArchiveRow[];
+  readonly turns: readonly ArchiveRow[];
+  readonly turnEvents: readonly ArchiveRow[];
+  readonly activeTurns: readonly ArchiveRow[];
+  readonly recoveryCommands: readonly ArchiveRow[];
+  readonly checkpoints: readonly ArchiveRow[];
+  readonly journals: readonly ArchiveRow[];
+  readonly creationRequests: readonly ArchiveRow[];
+}
+
+export interface CampaignArchiveRepository {
+  readCampaign(campaignId: CampaignId): CampaignArchiveSnapshot;
+  assertEmptyForRestore(campaignId: CampaignId): void;
+  restoreCampaign(snapshot: CampaignArchiveSnapshot): void;
+}
+
+export interface ExportRecord {
+  readonly id: string;
+  readonly campaignId: string;
+  readonly ownerId: string;
+  readonly stateVersion: number;
+  readonly mode: "PLAYER_SAFE" | "FULL_PRIVATE";
+  readonly requestId: string;
+  readonly path: string;
+  readonly sha256: string;
+  readonly sizeBytes: number;
+  readonly expiresAt: string;
+}
+
+export interface CreateExportRecordInput extends Omit<ExportRecord, "ownerId"> {}
+
+export interface ExportRepository {
+  get(exportId: string): ExportRecord;
+  findByRequest(campaignId: string, requestId: string): ExportRecord | null;
+  create(input: CreateExportRecordInput): ExportRecord;
+}
