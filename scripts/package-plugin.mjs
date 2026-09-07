@@ -1,6 +1,7 @@
 import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, extname, join, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { zipSync } from "fflate";
 
@@ -46,7 +47,7 @@ function validateSkills() {
   const skillsRoot = join(pluginRoot, "skills");
   for (const entry of readdirSync(skillsRoot, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
-    const text = readFileSync(join(skillsRoot, entry.name, "SKILL.md"), "utf8");
+    const text = readFileSync(join(skillsRoot, entry.name, "SKILL.md"), "utf8").replaceAll("\r\n", "\n");
     const frontmatter = /^---\nname: ([a-z0-9-]+)\ndescription: (.+)\n---/s.exec(text);
     if (!frontmatter || frontmatter[1] !== entry.name || !frontmatter[2].trim()) {
       throw new Error(`PLUGIN_SKILL_INVALID:${entry.name}`);
@@ -93,7 +94,7 @@ export function packagePlugin() {
   ]));
   mkdirSync(resolve(repositoryRoot, "tmp"), { recursive: true });
   writeFileSync(archivePath, zipSync(entries, { level: 9 }));
-  process.stdout.write(`${JSON.stringify({ status: "PASS", archive: relative(repositoryRoot, archivePath), files: files.length })}\n`);
+  process.stdout.write(`${JSON.stringify({ status: "PASS", archive: relative(repositoryRoot, archivePath).split(sep).join("/"), files: files.length })}\n`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) packagePlugin();
+if (resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) packagePlugin();

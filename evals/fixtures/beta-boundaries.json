@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "minimumDecisions": 12,
+  "minimumModes": ["EXPLORATION", "SOCIAL", "COMBAT", "RULES"],
+  "forbiddenKeys": ["dialogue", "narration", "hiddenFacts", "sourceText", "prompt", "apiKey", "filePath"],
+  "sentinels": ["SENTINEL_DIRECTOR_SECRET", "SENTINEL_SOURCE_TEXT", "SENTINEL_PRIVATE_PROMPT"]
+}

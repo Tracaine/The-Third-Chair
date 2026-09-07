@@ -33,7 +33,7 @@ describe("Narrator adapter", () => {
       return { finalOutput: narration, usage: { requests: 1, inputTokens: 10, outputTokens: 5, totalTokens: 15 } };
     };
     const adapter = new agents.OpenAiNarratorAdapter({
-      config: agents.loadAgentConfig({}), runClient: { run },
+      config: agents.loadAgentConfig({ NARRATOR_REASONING: "medium" }), runClient: { run },
     });
     await expect(adapter.narrate(input())).resolves.toEqual(narration);
   });

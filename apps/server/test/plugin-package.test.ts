@@ -43,7 +43,7 @@ describe("private Third Chair plugin package", () => {
     const names = readdirSync(skillRoot).sort();
     expect(names).toEqual(["third-chair-campaign", "third-chair-play", "third-chair-rules", "third-chair-source-pack"]);
     for (const name of names) {
-      const text = readFileSync(join(skillRoot, name, "SKILL.md"), "utf8");
+      const text = readFileSync(join(skillRoot, name, "SKILL.md"), "utf8").replaceAll("\r\n", "\n");
       expect(text).toMatch(new RegExp(`^---\\nname: ${name}\\ndescription: .+\\n---`, "s"));
       expect(text).not.toMatch(/\[TODO:|TODO_PLACEHOLDER/);
     }
