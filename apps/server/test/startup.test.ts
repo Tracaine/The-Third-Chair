@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { performStartup } from "../src/startup.js";
+import { performStartup, StartupFailure, startupErrorDiagnostic } from "../src/startup.js";
 
 const roots: string[] = [];
 afterEach(() => {
@@ -48,5 +48,16 @@ describe("runtime startup preflight", () => {
     const env = fixtureEnv({ THIRD_CHAIR_FAKE_MODE: "1", THIRD_CHAIR_WIDGET_BUILD: join(tmpdir(), `missing-widget-${Date.now()}.html`) });
     expect(() => performStartup(env)).toThrow("WIDGET_BUILD_MISSING");
     expect(existsSync(env.THIRD_CHAIR_DATABASE!)).toBe(false);
+  });
+
+  it("reports the safe root startup failure without leaking exception text", () => {
+    const error = new StartupFailure("STARTUP_PREFLIGHT_FAILED", {
+      cause: new Error("DATABASE_MIGRATION_FAILED", { cause: new Error("CAMPAIGN_START_HASH_MISMATCH") }),
+    });
+    expect(startupErrorDiagnostic(error)).toEqual({
+      level: "error",
+      code: "STARTUP_PREFLIGHT_FAILED",
+      detailCode: "CAMPAIGN_START_HASH_MISMATCH",
+    });
   });
 });

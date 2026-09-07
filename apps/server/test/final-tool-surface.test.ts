@@ -39,7 +39,8 @@ describe("final MCP tool surface", () => {
         text: "<!doctype html><title>Test table</title>",
         _meta: {
           "openai/widgetDescription": "Test table",
-          ui: { csp: { connectDomains: [], resourceDomains: [] }, prefersBorder: false },
+          "openai/widgetDomain": "https://tracaine.github.io",
+          ui: { csp: { connectDomains: [], resourceDomains: [] }, domain: "https://tracaine.github.io", prefersBorder: false },
         },
       },
     );
@@ -48,7 +49,7 @@ describe("final MCP tool surface", () => {
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     try {
-      expect(client.getServerVersion()).toEqual({ name: "third-chair", version: "0.2.0" });
+      expect(client.getServerVersion()).toEqual({ name: "third-chair", version: "0.2.1" });
       const listed = await client.listTools();
       expect(listed.tools.map(({ name }) => name)).toEqual(expectedNames);
       expect(Object.fromEntries(listed.tools.map(({ name, annotations }) => [name, annotations]))).toEqual(expectedAnnotations);

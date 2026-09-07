@@ -50,6 +50,31 @@ export class StartupFailure extends Error {
   }
 }
 
+export interface StartupErrorDiagnostic {
+  readonly level: "error";
+  readonly code: string;
+  readonly detailCode?: string;
+}
+
+const SAFE_STARTUP_CODE = /^[A-Z][A-Z0-9_]*$/;
+
+export function startupErrorDiagnostic(error: unknown): StartupErrorDiagnostic {
+  const codes: string[] = [];
+  let current: unknown = error;
+  for (let depth = 0; depth < 8 && current instanceof Error; depth += 1) {
+    const candidate = current instanceof StartupFailure ? current.code : current.message;
+    if (SAFE_STARTUP_CODE.test(candidate) && codes.at(-1) !== candidate) codes.push(candidate);
+    current = current.cause;
+  }
+  const code = codes[0] ?? "STARTUP_PREFLIGHT_FAILED";
+  const detailCode = codes.at(-1);
+  return {
+    level: "error",
+    code,
+    ...(detailCode && detailCode !== code ? { detailCode } : {}),
+  };
+}
+
 function configuredPath(value: string | undefined, fallback: string): string {
   const path = resolve(value ?? fallback);
   if (path.trim().length === 0) throw new StartupFailure("INVALID_RUNTIME_PATH");

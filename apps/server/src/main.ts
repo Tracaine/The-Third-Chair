@@ -8,14 +8,13 @@ import { createMcpServer, createSdkMcpServer } from "./mcp/server.js";
 import { createLiveModelPorts } from "./runtime/model-ports.js";
 import { createFakeSourcePack } from "./runtime/fake-source-pack.js";
 import { createFakeCampaignSpine } from "./runtime/fake-campaign-spine.js";
-import { mutationRecoveryGuard, performStartup, StartupFailure } from "./startup.js";
+import { mutationRecoveryGuard, performStartup, startupErrorDiagnostic } from "./startup.js";
 
 const config = readConfig();
 const startup = (() => {
   try { return performStartup(); }
   catch (error) {
-    const code = error instanceof StartupFailure ? error.code : "STARTUP_PREFLIGHT_FAILED";
-    process.stderr.write(`${JSON.stringify({ level: "error", code })}\n`);
+    process.stderr.write(`${JSON.stringify(startupErrorDiagnostic(error))}\n`);
     process.exit(1);
   }
 })();

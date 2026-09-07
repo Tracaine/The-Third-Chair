@@ -35,7 +35,7 @@ function Wait-ForHealth([string]$Url, [int]$Seconds) {
   while ((Get-Date) -lt $deadline) {
     try {
       $response = Invoke-RestMethod -Uri $Url -TimeoutSec 5
-      if ($response.status -eq "ok") {
+      if ($response.status -in @("ok", "ready", "degraded")) {
         return $true
       }
     } catch {
@@ -133,6 +133,12 @@ try {
   $env:THIRD_CHAIR_FAKE_MODE = "0"
   $env:THIRD_CHAIR_DATABASE = $campaignPath
   $env:THIRD_CHAIR_SOURCE_PACK_DATABASE = $sourcePackPath
+  if ([string]::IsNullOrWhiteSpace($env:THIRD_CHAIR_WIDGET_DOMAIN)) {
+    $env:THIRD_CHAIR_WIDGET_DOMAIN = Get-DotEnvValue "THIRD_CHAIR_WIDGET_DOMAIN" $envFile
+  }
+  if ([string]::IsNullOrWhiteSpace($env:THIRD_CHAIR_WIDGET_DOMAIN)) {
+    $env:THIRD_CHAIR_WIDGET_DOMAIN = "https://tracaine.github.io"
+  }
 
   $serverArgs = @("--import", "tsx", "apps/server/src/main.ts")
 

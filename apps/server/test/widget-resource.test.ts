@@ -16,9 +16,18 @@ describe("versioned widget resource", () => {
       text: "<!doctype html><html><body>Raven's Table</body></html>",
       _meta: {
         "openai/widgetDescription": "A persistent, player-safe Third Chair table showing the current scene, character status, visible dice, combat, clues, and recovery state.",
-        ui: { csp: { connectDomains: [], resourceDomains: [] }, prefersBorder: false },
+        "openai/widgetDomain": "https://tracaine.github.io",
+        ui: { csp: { connectDomains: [], resourceDomains: [] }, domain: "https://tracaine.github.io", prefersBorder: false },
       },
     });
+  });
+
+  it("accepts a configurable dedicated widget origin", () => {
+    const directory = mkdtempSync(join(tmpdir(), "third-chair-widget-domain-"));
+    const path = join(directory, "index.html");
+    writeFileSync(path, "<!doctype html><title>Table</title>");
+    expect(loadWidgetResource(path, "https://table.example.com")._meta.ui.domain).toBe("https://table.example.com");
+    expect(() => loadWidgetResource(path, "http://localhost:8787/widget")).toThrow("INVALID_WIDGET_DOMAIN");
   });
 
   it("fails readiness instead of serving a blank or missing build", () => {

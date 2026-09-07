@@ -19,6 +19,7 @@ ENV NODE_ENV=production \
     SOURCE_PACK_DB_PATH=/app/private/source-pack.sqlite \
     THIRD_CHAIR_EXPORT_DIRECTORY=/app/data/exports \
     THIRD_CHAIR_WIDGET_BUILD=/app/apps/widget/dist/index.html \
+    THIRD_CHAIR_WIDGET_DOMAIN=https://tracaine.github.io \
     THIRD_CHAIR_TRACE_MODE=off \
     OPENAI_AGENTS_DISABLE_TRACING=1
 WORKDIR /app

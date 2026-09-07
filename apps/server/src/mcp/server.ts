@@ -47,7 +47,7 @@ export function createMcpServer(deps: ServerDependencies): McpServer {
 
 /** SDK registration is kept beside the in-process adapter so the same handlers own both boundaries. */
 export function createSdkMcpServer(deps: ServerDependencies, widgetResource: WidgetResource = loadWidgetResource()): SdkMcpServer {
-  const server = new SdkMcpServer({ name: "third-chair", version: "0.2.0" });
+  const server = new SdkMcpServer({ name: "third-chair", version: "0.2.1" });
   server.registerTool(listCampaignsDescriptor.name, { description: listCampaignsDescriptor.description, inputSchema: listCampaignsDescriptor.inputSchema, outputSchema: listCampaignsDescriptor.outputSchema, annotations: listCampaignsDescriptor.annotations }, async (input) => listCampaigns(deps, input));
   server.registerTool(createCampaignDescriptor.name, { description: createCampaignDescriptor.description, inputSchema: createCampaignDescriptor.inputSchema, outputSchema: createCampaignDescriptor.outputSchema, annotations: createCampaignDescriptor.annotations }, async (input) => { guardMutation(deps, "create_campaign", input); return createCampaign({ campaignCreator: requireCampaignCreator(deps) }, input); });
   server.registerTool(getTableViewDescriptor.name, { description: getTableViewDescriptor.description, inputSchema: getTableViewDescriptor.inputSchema, outputSchema: getTableViewDescriptor.outputSchema, annotations: getTableViewDescriptor.annotations }, async (input) => getTableView(deps, input));

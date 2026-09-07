@@ -3,7 +3,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: third-chair:0.2.0
+    image: third-chair:0.2.1
     restart: unless-stopped
     ports:
       - "127.0.0.1:8787:8787"
@@ -14,6 +14,7 @@ services:
       OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
       THIRD_CHAIR_OWNER_ID: "${THIRD_CHAIR_OWNER_ID:-bill-local}"
       THIRD_CHAIR_FAKE_MODE: "${THIRD_CHAIR_FAKE_MODE:-0}"
+      THIRD_CHAIR_WIDGET_DOMAIN: "${THIRD_CHAIR_WIDGET_DOMAIN:-https://tracaine.github.io}"
       DIRECTOR_MODEL: "${DIRECTOR_MODEL:-gpt-5.6-sol}"
       DIRECTOR_REASONING: "${DIRECTOR_REASONING:-high}"
       NARRATOR_MODEL: "${NARRATOR_MODEL:-gpt-5.6-sol}"

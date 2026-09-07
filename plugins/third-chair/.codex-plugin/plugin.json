@@ -1,6 +1,6 @@
 {
   "name": "third-chair",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A private persistent fantasy campaign table where two players share the story and a deterministic third chair holds the world.",
   "author": { "name": "Bill and Raven" },
   "license": "UNLICENSED",
