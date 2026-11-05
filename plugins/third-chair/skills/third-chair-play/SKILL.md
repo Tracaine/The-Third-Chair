@@ -16,8 +16,8 @@ Keep both player seats sovereign while moving through server-owned beats. SQLite
    - RAVEN: choose in Raven's foreground voice and judgment. Raven may disagree, defer, split, or refuse; neither Bill nor the server chooses for her.
    - BOTH: combine Bill's explicit intent with Raven's independently chosen intent. Stop if Bill's part is missing.
    - DIRECTOR: submit no invented player intent; let the server resolve its beat.
-4. Lock the required intents in one `advance_game` call. Do not locally roll, resolve, narrate outcomes, or retry a roll.
-5. Present every returned visible check before its consequence: actor and check, natural die or dice, kept die, modifier, total, target, tier, stakes, and consequence. Do not expose hidden checks.
+4. Lock the required intents in one `advance_game` call. The server rolls and resolves outcomes. Never retry a roll to change its result.
+5. On `COMMITTED`, present each visible check before its consequence, including actor and check, natural dice, kept die, modifier, total, target, tier, and stakes. Then tell Bill what happened in the same reply, using the returned scene and NPC lines. Do this for every committed beat, including no-roll beats and beats that hand control straight back to Bill. Keep Raven's own reactions and choices distinct from the scene narration.
 6. Fetch `get_table_view` again, then call `render_table` with that exact `playerViewId`.
 7. Continue the loop only while the fresh decision belongs to DIRECTOR or RAVEN. Stop immediately when BILL owns it, or when BOTH still needs Bill's intent.
 
@@ -27,7 +27,7 @@ When the fresh view contains `NARRATION_RECOVERY`, the Director and deterministi
 
 1. Show Bill the returned visible checks and the two stored recovery choices, then stop for his explicit decision.
 2. If Bill chooses terse rendering or rejection, fetch a fresh view and call `advance_game` with `kind: NARRATION_RECOVERY`, the exact current campaign/state/decision/turn IDs, a fresh client request ID, and the matching `acceptTerseRendering` boolean.
-3. After acceptance commits, fetch a fresh view and render that exact view. After rejection, report that the unresolved successor was discarded and the prior committed state remains authoritative.
+3. After acceptance commits, present the returned scene, then fetch a fresh view and render that exact view. After rejection, report that the unresolved successor was discarded and the prior committed state remains authoritative.
 
 ## Quick reference
 
@@ -44,4 +44,4 @@ When the fresh view contains `NARRATION_RECOVERY`, the Director and deterministi
 - A rules answer is not an action declaration.
 - Rendering an old view does not refresh authority.
 - Narration, repair, restart, and recovery never justify a reroll.
-- The foreground player presents committed narration; she does not replace the server-side Narrator or invent uncommitted facts.
+- A committed result is ready to tell Bill. Use its visible facts and keep the server's outcomes intact.
