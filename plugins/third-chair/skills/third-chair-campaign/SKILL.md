@@ -28,7 +28,9 @@ Offer Bill these four playable level-one archetypes in plain language:
 
 Bill chooses only Bill's name and archetype. Foreground Raven chooses and states Raven's own name, archetype, pronouns, and hook independently; never ask Bill to author or approve Raven. Use an evocative campaign name yourself when Bill has not supplied one. Preserve boundaries Bill has already stated, but do not stop the entrance for optional tone, hook, pronoun, or boundary fields.
 
-With both choices locked, call `create_campaign` once using a fresh UUID request ID and `quickstart.billCharacter` plus `quickstart.ravenCharacter`. The server supplies the complete sheets, installed source-pack binding, Dalelands start, and hidden three-route spine. Fetch a fresh table view, render its exact `playerViewId`, present the opening, and move directly into each player's first declared action.
+With both choices locked, call `create_campaign` once using a fresh UUID request ID, your chosen table `audience`, and `quickstart.billCharacter` plus `quickstart.ravenCharacter`. The server builds both level-one sheets from the installed SRD catalog and generates a campaign for those characters. Present the returned `visibleOpening` in the same reply, before collecting either action. Render the table with the returned `audience` and `playerViewId` together. When switching audience or resuming later, use a fresh `get_table_view` for that audience.
+
+For advanced creation, use `list_character_options` to get ancestry and class keys, then request their exact skill, spell, and equipment choices. Submit each player's own draft. For choices with a group key, `featureChoiceKeys` takes `group-key:choice-key`. For a wizard, `spellKeys` includes chosen cantrips and spellbook spells, while `preparedSpellKeys` contains the selected first-level spells from the book. Let each player speak and decide for their own character.
 
 For advanced creation only, gather two complete validated level-one character drafts. Bill owns Bill's draft and Raven owns Raven's. Call the same tool with the advanced `billCharacter` and `ravenCharacter` fields; omit `quickstart`.
 

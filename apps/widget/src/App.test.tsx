@@ -39,6 +39,20 @@ describe("Raven's Table", () => {
     expect(screen.queryByText(/unknown/i)).not.toBeInTheDocument();
   });
 
+  it("distinguishes unavailable character fields from empty ones", () => {
+    const [bill, raven] = explorationFixture.playerView.actors;
+    render(<App view={{
+      ...explorationFixture,
+      playerView: { ...explorationFixture.playerView, actors: [
+        { ...bill!, skills: {}, equipment: [], spells: [] }, raven!,
+      ] },
+    }} />);
+    expect(within(screen.getByRole("region", { name: "Bill skills" })).getByText("None listed")).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Raven skills" })).getByText("Unavailable in this view")).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Bill equipment" })).getByText("Traveling light")).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Raven equipment" })).getByText("Unavailable in this view")).toBeInTheDocument();
+  });
+
   it("renders narration recovery as a player-readable status", () => {
     render(<App view={{
       ...explorationFixture,

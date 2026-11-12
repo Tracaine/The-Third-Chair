@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { CharacterDraftSchema } from "./characters.js";
-import { DecisionRequestSchema } from "./decisions.js";
+import { PlayerDecisionViewSchema } from "./views.js";
 import { AudienceSchema, PersistedIdSchema, PlayerSeatSchema } from "./ids.js";
 import { SourceCitationSchema } from "./sources.js";
 
@@ -100,7 +100,7 @@ export const CampaignSpineProposalSchema = z.object({
     contradiction: TextSchema,
   }).strict()).min(1).max(20),
   outcomes: z.array(z.object({ key: KeySchema, text: TextSchema, ...SourcedRecordFields }).strict()).min(2).max(8),
-  startingClues: z.array(z.object({ key: KeySchema, text: TextSchema, ...SourcedRecordFields }).strict()).min(1).max(18),
+  startingClues: z.array(z.object({ key: KeySchema, text: TextSchema, discovery: TextSchema.nullish(), ...SourcedRecordFields }).strict()).min(1).max(18),
   riskTags: z.array(z.object({ key: KeySchema, text: TextSchema, ...SourcedRecordFields }).strict()).min(1).max(18),
   citations: z.array(CampaignCitationSchema).max(24),
 }).strict().superRefine((spine, context) => {
@@ -116,6 +116,14 @@ export const CampaignSpineProposalSchema = z.object({
   const clueSets = spine.routes.map((route) => [...new Set(route.startingClueKeys)].sort().join("\u0000"));
   if (new Set(clueSets).size !== clueSets.length) {
     context.addIssue({ code: "custom", path: ["routes"], message: "CAMPAIGN_ROUTES_EQUIVALENT" });
+  }
+  for (const [field, records] of [
+    ["factions", spine.factions], ["clocks", spine.factions.map(({ clock }) => clock)],
+    ["npcs", spine.npcs], ["outcomes", spine.outcomes], ["startingClues", spine.startingClues], ["riskTags", spine.riskTags],
+  ] as const) {
+    if (new Set(records.map(({ key }) => key)).size !== records.length) {
+      context.addIssue({ code: "custom", path: [field], message: "DUPLICATE_CAMPAIGN_RECORD" });
+    }
   }
   const citationIds = new Set(spine.citations.map((citation) => citation.id));
   if (citationIds.size !== spine.citations.length) {
@@ -145,8 +153,7 @@ export const CampaignSpineProposalSchema = z.object({
   }
   const playerVisible = new Set(["PUBLIC", "PARTY"]);
   if (!playerVisible.has(spine.opening.location.audience)
-    || !playerVisible.has(spine.opening.pressure.audience)
-    || spine.startingClues.some((clue) => !playerVisible.has(clue.audience))) {
+    || !playerVisible.has(spine.opening.pressure.audience)) {
     context.addIssue({ code: "custom", path: ["audience"], message: "VISIBLE_OPENING_AUDIENCE_REQUIRED" });
   }
   const clueKeys = new Set(spine.startingClues.map((clue) => clue.key));
@@ -194,9 +201,10 @@ export const PublicCharacterCardSchema = z.object({
 export const CreateCampaignOutputSchema = z.object({
   campaignId: PersistedIdSchema,
   sourcePackHash: SourceHashSchema,
-  visibleOpening: TextSchema,
+  visibleOpening: z.string().trim().min(1).max(8000),
   characters: z.array(PublicCharacterCardSchema).length(2),
-  currentDecision: DecisionRequestSchema,
+  currentDecision: PlayerDecisionViewSchema,
+  audience: PlayerSeatSchema,
   playerViewId: z.string().regex(/^[a-f0-9]{64}$/),
 }).strict();
 

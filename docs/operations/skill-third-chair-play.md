@@ -25,3 +25,9 @@ Six new isolated evaluators read the completed skill and replayed the same cases
 - The OOC case made no mutation from the question or pacing request alone.
 
 Result: **PASS (6/6)**. The skill creator structural validator also passed.
+
+## Discovery and conclusions
+
+Read the shared narration in the same reply as the committed turn, then respond as Raven's character. Present any visible roll and what changed before asking for another choice. Refer to clues and threads that the appropriate table view has revealed. When the decision mode is `ENDED`, present the consequences and leave the campaign at its conclusion.
+
+When Raven chooses to cast a spell, commit its ID from her own sheet in `committedResourceIds`. Bill must choose his own spell before his intent includes its ID. Use the currently visible destination ID in `targetIds` for a declared move.

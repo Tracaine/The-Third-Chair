@@ -5,6 +5,7 @@ import { createMcpServer, createSdkMcpServer } from "@third-chair/server";
 
 const expectedAnnotations = {
   list_campaigns: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, idempotentHint: true },
+  list_character_options: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, idempotentHint: true },
   create_campaign: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, idempotentHint: true },
   get_table_view: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, idempotentHint: true },
   advance_game: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, idempotentHint: true },
@@ -19,7 +20,7 @@ const expectedAnnotations = {
 const expectedNames = Object.keys(expectedAnnotations);
 
 describe("final MCP tool surface", () => {
-  it("advertises exactly the ten binding tools with complete annotations and schemas", () => {
+  it("advertises exactly the eleven binding tools with complete annotations and schemas", () => {
     const mcp = createMcpServer({ campaigns: {} as never, turns: {} as never, engine: {} as never });
 
     expect(mcp.tools.map(({ name }) => name)).toEqual(expectedNames);
@@ -30,7 +31,7 @@ describe("final MCP tool surface", () => {
     }
   });
 
-  it("publishes the same ten-tool surface and refreshed version through the SDK boundary", async () => {
+  it("publishes the same tool surface and refreshed version through the SDK boundary", async () => {
     const server = createSdkMcpServer(
       { campaigns: {} as never, turns: {} as never, engine: {} as never },
       {

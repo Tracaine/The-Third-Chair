@@ -5,7 +5,7 @@ import {
 import type { CampaignRepository, JsonValue, TurnRecord, TurnRepository } from "@third-chair/storage";
 import { sha256Json } from "../hash.js";
 import { applyOperationsToClone } from "../operations/apply.js";
-import { projectPlayerView } from "../projection/player-view.js";
+import { projectPlayerView, projectSharedNarrationView } from "../projection/player-view.js";
 import { resolvePlan } from "../resolution/dice.js";
 import { KeyedMutex } from "../mutex.js";
 import { deriveDecisionAuthority } from "./decision-policy.js";
@@ -166,6 +166,14 @@ export function createTurnEngine(deps: TurnEngineDeps): TurnEngine {
       let nextRngCounter = turn.nextRngCounter;
       const lockAndResolveChecks = (rawPlan: ResolutionPlan) => {
         const plan = ResolutionPlanSchema.parse(rawPlan);
+        for (const check of plan.checks.filter(({ key }) => key === "death-save")) {
+          const actor = turn.beforeState.actors[check.actorId];
+          if (!actor || actor.currentHp !== 0 || actor.deathSaves.successes === 3 || actor.deathSaves.failures === 3
+            || check.sides !== 20 || check.dc !== 10 || check.modifier !== 0 || check.advantage !== "NORMAL"
+            || check.visibility !== "PUBLIC" || plan.checks.filter((entry) => entry.key === "death-save" && entry.actorId === check.actorId).length !== 1) {
+            throw new Error("INVALID_DEATH_SAVE_PLAN");
+          }
+        }
         turn = deps.turns.getTurn(turn.id);
         if (turn.resolutionPlan !== null) {
           const stored = ResolutionPlanSchema.parse(turn.resolutionPlan);
@@ -209,10 +217,23 @@ export function createTurnEngine(deps: TurnEngineDeps): TurnEngine {
           throw new Error("DIRECTOR_DID_NOT_RESOLVE_CHECKS");
         }
         const counter = nextRngCounter ?? turn.beforeState.metadata.rngCounter;
-        const nextDecision = deriveDecisionAuthority(turn.beforeState, proposal.nextDecision);
         const applied = applyOperationsToClone(turn.beforeState,
           [...proposal.uncontestedOperations, ...proposal.checkLinkedOperations],
           { intents: turn.lockedIntents, resolutions: resolved });
+        const shared = projectSharedNarrationView(applied.candidate);
+        if (proposal.narrativeBrief.requiredEventIds.some((id) => !shared.events.some((event) => event.id === id))
+          || proposal.narrativeBrief.requiredResolutionIds.some((id) => !resolved.some((roll) => roll.id === id && roll.visibility === "PUBLIC"))) {
+          throw new Error("PRIVATE_RECORD_IN_NARRATIVE_BRIEF");
+        }
+        const hiddenFacts = applied.candidate.facts.filter((fact) => !shared.facts.some(({ id }) => id === fact.id));
+        const playerText = [proposal.narrativeBrief.summary, proposal.nextDecision.situation,
+          proposal.nextDecision.requiredInput, proposal.nextDecision.constraints, ...proposal.nextDecision.legalOptions,
+          ...shared.facts.filter(({ id }) => !turn.beforeState.facts.some((fact) => fact.id === id)).map(({ text }) => text),
+          ...shared.events.filter(({ id }) => !turn.beforeState.events.some((event) => event.id === id)).map(({ text }) => text),
+          ...(applied.candidate.campaignProgress ? [applied.candidate.campaignProgress.milestone] : [])].join("\n").toLowerCase();
+        if (hiddenFacts.some((fact) => playerText.includes(fact.id.toLowerCase())
+          || fact.text.length >= 12 && playerText.includes(fact.text.toLowerCase()))) throw new Error("HIDDEN_FACT_IN_SHARED_TEXT");
+        const nextDecision = deriveDecisionAuthority(applied.candidate, proposal.nextDecision);
         const finalized = finalizeCandidateForCommit({ previous: turn.beforeState, candidate: applied.candidate,
           proposedNextDecision: nextDecision, nextRngCounter: counter });
         return { proposal, finalized, noCheck };
@@ -284,15 +305,16 @@ export function createTurnEngine(deps: TurnEngineDeps): TurnEngine {
         nextRngCounter = turn.nextRngCounter;
       }
       deps.turns.persistProposal(turn.id, proposal, finalized.candidate);
-      const beforeView = projectPlayerView(turn.beforeState, "RAVEN");
-      const afterView = projectPlayerView(finalized.candidate, "RAVEN");
+      const beforeView = projectSharedNarrationView(turn.beforeState);
+      const afterView = projectSharedNarrationView(finalized.candidate);
       const visibleEvents = afterView.events.filter(({ id }) => !beforeView.events.some((event) => event.id === id));
       const narratorInput = {
         beforeVisibleState: beforeView, visibleState: afterView, lockedIntents: turn.lockedIntents,
         persistedPlan: turn.resolutionPlan === null ? null : ResolutionPlanSchema.parse(turn.resolutionPlan),
         resolutions: resolved.filter((roll) => roll.visibility === "PUBLIC"),
-        visibleOperations: [...proposal.uncontestedOperations, ...proposal.checkLinkedOperations],
-        visibleEvents, proposal,
+        visibleOperations: [...proposal.uncontestedOperations, ...proposal.checkLinkedOperations]
+          .filter((op) => op.audience === "PUBLIC" || op.audience === "PARTY"),
+        visibleEvents, proposal: { narrativeBrief: proposal.narrativeBrief },
       };
       let narration: ReturnType<typeof NarrationSchema.parse> | null = null;
       let narrationFailure: unknown = null;

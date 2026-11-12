@@ -5,7 +5,8 @@ import { dirname, join, resolve } from "node:path";
 import aliases from "../config/aliases.v1.json" with { type: "json" };
 import selection from "../config/frcs-selection.v1.json" with { type: "json" };
 import cases from "../test/fixtures/retrieval-cases.json" with { type: "json" };
-import { extractNativeTextPages } from "./extraction/pdf-text.js";
+import { extractNativeText } from "./extraction/pdf-text.js";
+import { parsePageStream } from "./parsing/page-stream.js";
 import { runSelectiveOcr } from "./extraction/ocr.js";
 import { indexEntities } from "./indexing/entities.js";
 import { assertSourcePackIntegrity, openSourcePackForBuild, openSourcePackReadOnly } from "./indexing/database.js";
@@ -16,6 +17,7 @@ import { hashIdentityConfig, loadSourceConfig, verifySourceDocuments } from "./m
 import { parseFrcsPages } from "./parsing/frcs.js";
 import { parseGrandHistoryPages } from "./parsing/grand-history.js";
 import { parseSrdPages } from "./parsing/srd.js";
+import { extractSrdCharacterOptions } from "./parsing/srd-character-options.js";
 import { parseRetrievalCases, runRetrievalFixtures } from "./retrieval/fixtures.js";
 import { SqliteSourcePackService } from "./retrieval/service.js";
 import { promoteSourcePack } from "./promote.js";
@@ -50,8 +52,10 @@ export async function buildSourcePack(options: BuildSourcePackOptions): Promise<
   const report = await buildAtomically(destination, async (pending, buildDir): Promise<SourcePackBuildReport> => {
     const byId = new Map(verified.documents.map((document) => [document.id, document]));
     const srdDocument = byId.get("srd-5.1")!; const historyDocument = byId.get("grand-history")!; const frcsDocument = byId.get("frcs-3e")!;
-    const srd = parseSrdPages(await extractNativeTextPages(srdDocument));
-    const history = parseGrandHistoryPages(await extractNativeTextPages(historyDocument));
+    const srdText = await extractNativeText(srdDocument);
+    const srd = parseSrdPages(parsePageStream(srdText));
+    const characterCatalog = extractSrdCharacterOptions(srdText);
+    const history = parseGrandHistoryPages(parsePageStream(await extractNativeText(historyDocument)));
     const timelineDiagnostics: string[] = []; const edges = buildTimelineEdges(history.events, history.references, timelineDiagnostics);
     const frcs = parseFrcsPages(await runSelectiveOcr(frcsDocument.absolutePath, selection, buildDir));
     const allChunks = [...srd.chunks, ...history.chunks, ...frcs.chunks];
@@ -66,7 +70,7 @@ export async function buildSourcePack(options: BuildSourcePackOptions): Promise<
           permittedKinds: document.permittedKinds };
         writer.insertDocument(record);
       }
-      writer.insertChunks(allChunks); writer.insertRuleSections(srd.ruleSections); writer.insertTimeline(history.events, edges);
+      writer.insertChunks(allChunks); writer.insertRuleSections(srd.ruleSections); writer.insertCharacterCatalog(characterCatalog); writer.insertTimeline(history.events, edges);
       writer.insertEntities(indexed.entities, indexed.mentions);
       db.exec("ANALYZE"); db.exec("PRAGMA optimize"); assertSourcePackIntegrity(db);
       const fixtures = runRetrievalFixtures(new SqliteSourcePackService(db, aliases), parseRetrievalCases(cases));
@@ -77,8 +81,8 @@ export async function buildSourcePack(options: BuildSourcePackOptions): Promise<
       db.close();
       const databaseSha256 = await fileHash(pending);
       return { status: "PASS", sourcePackManifestHash: verified.manifest.sourcePackManifestHash, databaseSha256,
-        counts: { documents: verified.documents.length, chunks: allChunks.length, ruleSections: srd.ruleSections.length,
-          entities: indexed.entities.length, entityMentions: indexed.mentions.length, timelineEvents: history.events.length,
+        counts: { documents: verified.documents.length, chunks: allChunks.length + characterCatalog.chunks.length, ruleSections: srd.ruleSections.length + characterCatalog.ruleSections.length,
+          characterOptions: characterCatalog.characterOptions.length, entities: indexed.entities.length, entityMentions: indexed.mentions.length, timelineEvents: history.events.length,
           timelineEdges: edges.length, mechanicsDiagnostics: frcs.diagnostics.length, unresolvedTimelineReferences: timelineDiagnostics.length },
         pagesProcessed: { srd: srdDocument.pageCount, grandHistory: historyDocument.pageCount, frcsOcr: 99 }, confidence,
         fixtures, toolVersions: verified.manifest.toolVersions };

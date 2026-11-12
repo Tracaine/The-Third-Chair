@@ -9,6 +9,7 @@ import { listCampaigns, listCampaignsDescriptor } from "./tools/list-campaigns.j
 import { answerRules, answerRulesDescriptor } from "./tools/answer-rules.js";
 import { recallKnownLore, recallKnownLoreDescriptor } from "./tools/recall-known-lore.js";
 import { renderTable, renderTableDescriptor } from "./tools/render-table.js";
+import { readCharacterOptions, listCharacterOptionsDescriptor } from "./tools/list-character-options.js";
 import { createCampaign, createCampaignDescriptor } from "./tools/create-campaign.js";
 import { createCheckpoint, createCheckpointDescriptor } from "./tools/create-checkpoint.js";
 import { rewindToCheckpoint, rewindToCheckpointDescriptor } from "./tools/rewind-to-checkpoint.js";
@@ -32,9 +33,10 @@ function exportDependencies(deps: ServerDependencies) {
   return { archives: deps.archives, exports: deps.exports, exportDirectory: deps.exportDirectory };
 }
 export function createMcpServer(deps: ServerDependencies): McpServer {
-  return { tools: [listCampaignsDescriptor, createCampaignDescriptor, getTableViewDescriptor, advanceGameDescriptor, answerRulesDescriptor, recallKnownLoreDescriptor, createCheckpointDescriptor, rewindToCheckpointDescriptor, renderTableDescriptor, exportCampaignDescriptor], async invoke(name, input) {
+  return { tools: [listCampaignsDescriptor, listCharacterOptionsDescriptor, createCampaignDescriptor, getTableViewDescriptor, advanceGameDescriptor, answerRulesDescriptor, recallKnownLoreDescriptor, createCheckpointDescriptor, rewindToCheckpointDescriptor, renderTableDescriptor, exportCampaignDescriptor], async invoke(name, input) {
     guardMutation(deps, name, input);
     if (name === "list_campaigns") return listCampaigns(deps, input as never);
+    if (name === "list_character_options") return readCharacterOptions(requireSourcePack(deps), input);
     if (name === "create_campaign") return createCampaign(campaignCreationDependencies(deps), input);
     if (name === "get_table_view") return getTableView(deps, input as never);
     if (name === "advance_game") return advanceGame(deps, input);
@@ -52,6 +54,7 @@ export function createMcpServer(deps: ServerDependencies): McpServer {
 export function createSdkMcpServer(deps: ServerDependencies, widgetResource: WidgetResource = loadWidgetResource()): SdkMcpServer {
   const server = new SdkMcpServer({ name: "third-chair", version: "0.2.2" });
   server.registerTool(listCampaignsDescriptor.name, { description: listCampaignsDescriptor.description, inputSchema: listCampaignsDescriptor.inputSchema, outputSchema: listCampaignsDescriptor.outputSchema, annotations: listCampaignsDescriptor.annotations }, async (input) => listCampaigns(deps, input));
+  server.registerTool(listCharacterOptionsDescriptor.name, { description: listCharacterOptionsDescriptor.description, inputSchema: listCharacterOptionsDescriptor.inputSchema, outputSchema: listCharacterOptionsDescriptor.outputSchema, annotations: listCharacterOptionsDescriptor.annotations }, async (input) => readCharacterOptions(requireSourcePack(deps), input));
   server.registerTool(createCampaignDescriptor.name, { description: createCampaignDescriptor.description, inputSchema: createCampaignDescriptor.inputSchema, outputSchema: createCampaignDescriptor.outputSchema, annotations: createCampaignDescriptor.annotations }, async (input) => { guardMutation(deps, "create_campaign", input); return createCampaign(campaignCreationDependencies(deps), input); });
   server.registerTool(getTableViewDescriptor.name, { description: getTableViewDescriptor.description, inputSchema: getTableViewDescriptor.inputSchema, outputSchema: getTableViewDescriptor.outputSchema, annotations: getTableViewDescriptor.annotations }, async (input) => getTableView(deps, input));
   server.registerTool(advanceGameDescriptor.name, { description: advanceGameDescriptor.description, inputSchema: advanceGameDescriptor.inputSchema, outputSchema: advanceGameDescriptor.outputSchema, annotations: advanceGameDescriptor.annotations }, async (input) => { guardMutation(deps, "advance_game", input); return advanceGame(deps, input); });

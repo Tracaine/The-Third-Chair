@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { createCampaignArchiveRepository, createCampaignCreationRepository, createCampaignRepository, createCheckpointRepository, createExportRepository, createTurnRepository } from "@third-chair/storage";
 import { WorldStateSchema, type ResolutionPlan } from "@third-chair/contracts";
 import { characterCatalogFromSourceOptions, createCampaignBuilder, createStarterCharacterCatalog, createTurnEngine, FakeDirector, FakeNarrator, sha256Json } from "@third-chair/engine";
@@ -34,8 +35,34 @@ if (config.fakeMode && sourcePack) try { campaigns.getCampaign(campaignId); } ca
     currentState: state, currentStateHash: sha256Json(state), rootBranchId: "test_demo_branch", rootBranchLabel: "Main" });
 }
 const fakePorts = () => ({
-  director: new FakeDirector((input) => { const plan: ResolutionPlan = { id: "test_demo_plan", checks: [{ id: "test_demo_check", actorId: "test_demo_raven", checkKind: "Investigation", key: "investigation", sides: 20, advantage: "NORMAL" as const, advantageReason: "No modifier", modifier: 0, dc: 10, visibility: "PUBLIC" as const, successStakes: "Find a clue", failureStakes: "Lose time", permittedOutcomeTiers: ["SUCCESS", "CRITICAL_SUCCESS", "FAILURE", "CRITICAL_FAILURE"], citations: ["SRD"] }] }; const rolls = input.runtime.lockAndResolveChecks(plan); return { uncontestedOperations: [], checkLinkedOperations: [{ id: "test_demo_fact", kind: "ADD_FACT" as const, reason: "Desk search", audience: "PARTY" as const, cause: { type: "RESOLUTION" as const, resolutionId: rolls.resolutions[0]!.id, allowedOutcomeTiers: [rolls.resolutions[0]!.tier] }, fact: { id: "test_demo_clue", audience: "PARTY" as const, kind: "Clue", text: "A note names a river crossing." } }], memoryWrites: [], riskTags: [], nextDecision: { ...input.state.currentDecision, id: "test_demo_next", stateVersion: 999, owner: "BILL" as const, eligibleActorIds: ["test_demo_bill"] }, narrativeBrief: { summary: "A clue is found.", requiredResolutionIds: ["test_demo_check"], requiredEventIds: [] } }; }),
-  narrator: new FakeNarrator((input) => ({ sceneText: `Roll ${input.resolutions[0]?.keptDie ?? ""}: a clue emerges.`, spokenNpcLines: [], mustIncludeResolutionIds: input.proposal.narrativeBrief.requiredResolutionIds, mustIncludeEventIds: [], visibleEventIds: [] })),
+  director: new FakeDirector(({ state, intents, runtime, persistedPlan }) => {
+    const actorId = intents.find(({ mode }) => mode === "ACT")?.actorId;
+    const plan: ResolutionPlan | null = persistedPlan ?? (actorId ? {
+      id: randomUUID(),
+      checks: [{
+        id: randomUUID(), actorId, checkKind: "Investigation", key: "investigation", sides: 20,
+        advantage: "NORMAL", advantageReason: "No modifier", modifier: 0, dc: 10, visibility: "PUBLIC",
+        successStakes: "Find a clue", failureStakes: "Lose time",
+        permittedOutcomeTiers: ["SUCCESS", "CRITICAL_SUCCESS", "FAILURE", "CRITICAL_FAILURE"], citations: ["SRD"],
+      }],
+    } : null);
+    const roll = plan ? runtime.lockAndResolveChecks(plan).resolutions[0] : undefined;
+    const clue = state.facts.find(({ kind }) => kind === "Undiscovered Clue");
+    const found = roll?.tier === "SUCCESS" || roll?.tier === "CRITICAL_SUCCESS";
+    return {
+      uncontestedOperations: [],
+      checkLinkedOperations: found && clue ? [{
+        id: randomUUID(), kind: "DISCOVER_CLUE", reason: "The search found a clue.", audience: "PARTY",
+        cause: { type: "RESOLUTION", resolutionId: roll.id, allowedOutcomeTiers: [roll.tier] }, clueId: clue.id,
+      }] : [],
+      memoryWrites: [], riskTags: [],
+      nextDecision: { ...state.currentDecision, id: randomUUID() },
+      narrativeBrief: { summary: found ? clue?.text ?? "The search goes smoothly." : "Time passes without a discovery.",
+        requiredResolutionIds: roll ? [roll.id] : [], requiredEventIds: [] },
+    };
+  }),
+  narrator: new FakeNarrator((input) => ({ sceneText: input.proposal.narrativeBrief.summary, spokenNpcLines: [],
+    mustIncludeResolutionIds: input.proposal.narrativeBrief.requiredResolutionIds, mustIncludeEventIds: [], visibleEventIds: [] })),
 });
 const ports = config.fakeMode ? fakePorts() : sourcePack
   ? createLiveModelPorts(loadAgentConfig(process.env), sourcePack)
@@ -43,10 +70,12 @@ const ports = config.fakeMode ? fakePorts() : sourcePack
 const engine = createTurnEngine({ campaigns, turns, director: ports.director, narrator: ports.narrator });
 const campaignCreator = sourcePack ? createCampaignBuilder({ campaigns, creationRequests, sourcePack,
   loadCharacterCatalog: () => {
-    if (!sourcePack.characterOptions) throw new Error("CHARACTER_OPTIONS_UNAVAILABLE");
-    const options = sourcePack.characterOptions();
-    return options.length === 0 ? createStarterCharacterCatalog() : characterCatalogFromSourceOptions(options);
+    if (config.fakeMode) return createStarterCharacterCatalog();
+    const options = sourcePack.characterOptions?.() ?? [];
+    if (options.length === 0) throw new Error("SOURCE_PACK_REBUILD_REQUIRED_FOR_CHARACTER_CREATION");
+    return characterCatalogFromSourceOptions(options);
   },
+  narrator: ports.narrator,
   spine: config.fakeMode ? createFakeCampaignSpine() : (ports as ReturnType<typeof createLiveModelPorts>).campaignSpine }) : undefined;
 const widgetResource = startup.widgetResource;
 const exportDirectory = startup.exportDirectory;

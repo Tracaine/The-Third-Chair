@@ -75,9 +75,10 @@ export function createStarterCharacterCatalog(): CharacterCatalog {
   return catalog;
 }
 
-export function quickstartCharacterDraft(choice: QuickstartCharacterChoice, seat: PlayerSeat): CharacterDraft {
+export function quickstartCharacterDraft(choice: QuickstartCharacterChoice, seat: PlayerSeat, sourced = false): CharacterDraft {
   return CharacterDraftSchema.parse({
     ...drafts[choice.archetype],
+    ...(sourced ? sourcedDrafts[choice.archetype] : {}),
     actorId: seat === "BILL" ? "10000000-0000-4000-8000-000000000001" : "10000000-0000-4000-8000-000000000002",
     controller: seat,
     name: choice.name,
@@ -85,3 +86,30 @@ export function quickstartCharacterDraft(choice: QuickstartCharacterChoice, seat
     characterHook: choice.characterHook,
   });
 }
+
+// Each preset uses the same validated choices as an advanced draft.
+const sourcedDrafts: Record<QuickstartCharacterChoice["archetype"], Partial<CharacterDraft>> = {
+  STALWART_FIGHTER: {
+    backgroundKey: "acolyte", languageChoices: ["Dwarvish", "Elvish", "Orc"],
+    featureChoiceKeys: ["fighting-style:defense"],
+    equipmentChoiceKeys: ["armor-chain-mail", "weapon-longsword-shield", "secondary-handaxe-2", "pack-explorer-s-pack"],
+  },
+  CUNNING_ROGUE: {
+    ancestryKey: "lightfoot-halfling", backgroundKey: "acolyte", languageChoices: ["Elvish", "Goblin"],
+    expertiseKeys: ["investigation", "stealth"],
+    skillKeys: ["acrobatics", "investigation", "perception", "stealth"],
+    equipmentChoiceKeys: ["weapon-rapier", "secondary-shortbow-arrows-20", "pack-burglar-s-pack"],
+  },
+  ARCANE_SCHOLAR: {
+    backgroundKey: "acolyte", languageChoices: ["Draconic", "Dwarvish", "Sylvan"],
+    skillKeys: ["arcana", "investigation"], ancestryCantripKey: "minor-illusion",
+    equipmentChoiceKeys: ["weapon-quarterstaff", "focus-component-pouch", "pack-scholar-s-pack"],
+    spellKeys: ["fire-bolt", "mage-hand", "prestidigitation", "magic-missile", "shield", "sleep", "mage-armor", "find-familiar", "detect-magic"],
+    preparedSpellKeys: ["magic-missile", "shield", "sleep", "mage-armor"],
+  },
+  DAWN_CLERIC: {
+    languageChoices: ["Celestial", "Elvish"], featureChoiceKeys: ["dwarven-tool:smith-s-tools"],
+    equipmentChoiceKeys: ["weapon-mace", "armor-chain-mail", "ranged-light-crossbow-crossbow-bolts-20", "pack-priest-s-pack"],
+    spellKeys: ["guidance", "sacred-flame", "spare-the-dying", "healing-word", "guiding-bolt", "sanctuary", "detect-magic"],
+  },
+};

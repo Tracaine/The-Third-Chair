@@ -4,7 +4,7 @@ const generated = (text: string, audience: "PUBLIC" | "PARTY" | "DIRECTOR" = "DI
   text, audience, origin: "CAMPAIGN_GENERATED" as const, citationIds: [],
 });
 
-/** An instant opening scaffold; the live Director develops it through committed play. */
+/** Deterministic fixture for local play and engine tests. */
 export function createQuickstartCampaignSpine(input: CampaignSpineInput): CampaignSpineProposal {
   const [bill, raven] = input.characters;
   return CampaignSpineProposalSchema.parse({

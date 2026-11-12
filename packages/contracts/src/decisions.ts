@@ -12,6 +12,7 @@ export const DecisionModeSchema = z.enum([
   "REACTION",
   "ADVANCEMENT",
   "CLARIFICATION",
+  "ENDED",
 ]);
 
 export const DecisionRequestSchema = z.object({

@@ -2,12 +2,12 @@
 
 Prerequisites: Docker Desktop, `private/source-pack.sqlite`, and `OPENAI_API_KEY` in the shell environment.
 
-From the repository root:
+For an existing install, stop the running container or local server, then pull the update and run the [character catalog upgrade](source-pack.md#upgrade-a-pack-already-in-use). Keep your current campaign database and the same bind mount. Run the commands below from the repository root.
 
 ```powershell
 npm ci
-npm test
 npm run build
+npm test
 docker compose -f docker/compose.yaml build
 docker compose -f docker/compose.yaml up -d
 curl.exe -fsS http://127.0.0.1:8787/health

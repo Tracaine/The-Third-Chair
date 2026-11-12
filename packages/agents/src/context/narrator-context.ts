@@ -29,6 +29,9 @@ const SafeOperationSchema = z.discriminatedUnion("kind", [
   Base.extend({ kind: z.literal("ADD_INVENTORY"), item: ItemSchema }).strict(),
   Base.extend({ kind: z.literal("REMOVE_INVENTORY"), itemId: PersistedIdSchema }).strict(),
   Base.extend({ kind: z.literal("SET_EQUIPPED"), itemId: PersistedIdSchema, slots: z.array(z.string()) }).strict(),
+  Base.extend({ kind: z.literal("APPLY_DEATH_SAVE"), ...Actor, deathSaves: PlayerActorViewSchema.shape.deathSaves }).strict(),
+  Base.extend({ kind: z.literal("DISCOVER_CLUE"), fact: FactSchema }).strict(),
+  Base.extend({ kind: z.literal("SET_CAMPAIGN_PROGRESS"), progress: PlayerViewSchema.shape.campaignProgress.unwrap() }).strict(),
   Base.extend({ kind: z.literal("ADD_FACT"), fact: FactSchema }).strict(),
   Base.extend({ kind: z.literal("ADD_EVENT"), event: EventSchema }).strict(),
   Base.extend({ kind: z.literal("ADVANCE_CLOCK"), clockId: PersistedIdSchema, current: z.number().int().nonnegative(), maximum: z.number().int().positive() }).strict(),
@@ -106,6 +109,12 @@ function projectOperation(op: WorldOperation, before: NarrationView, after: Narr
       const item = after.inventory.find(({ id }) => id === op.itemId);
       return item ? { ...base, kind: op.kind, itemId: item.id, slots: item.equippedSlots } : null;
     }
+    case "APPLY_DEATH_SAVE": return actor ? { ...base, kind: op.kind, actorId: actor.id, deathSaves: actor.deathSaves } : null;
+    case "DISCOVER_CLUE": {
+      const fact = after.facts.find(({ id }) => id === op.clueId);
+      return fact && !before.facts.some(({ id }) => id === fact.id) ? { ...base, kind: op.kind, fact } : null;
+    }
+    case "SET_CAMPAIGN_PROGRESS": return after.campaignProgress ? { ...base, kind: op.kind, progress: after.campaignProgress } : null;
     case "ADD_FACT": {
       const fact = after.facts.find(({ id }) => id === op.fact.id);
       return fact ? { ...base, kind: op.kind, fact } : null;
@@ -153,7 +162,7 @@ export function buildNarratorInput(args: NarratorBuildInput): NarratorInput {
   const toneSettings = checked("toneSettings", ToneSettingsSchema, args.toneSettings, 32_000);
   const narrativeBrief = checked("narrativeBrief", TurnProposalSchema.shape.narrativeBrief, args.narrativeBrief, 32_000);
   const visibleOperations = args.visibleOperations
-    .filter((op) => op.audience === "PUBLIC" || op.audience === "PARTY" || op.audience === viewer)
+    .filter((op) => op.audience === "PUBLIC" || op.audience === "PARTY" || (afterView.audience !== "PARTY" && op.audience === viewer))
     .map((op) => projectOperation(op, beforeView, afterView)).filter((op): op is SafeOperation => op !== null);
   const requestedEvents = new Set([...args.visibleEvents.map(({ id }) => id), ...narrativeBrief.requiredEventIds]);
   const visibleEvents = [...beforeView.events.filter(({ id }) => !afterView.events.some((event) => event.id === id)), ...afterView.events]

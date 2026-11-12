@@ -28,10 +28,17 @@ export class SqliteSourcePackService implements SourcePackService {
   searchRules(input: { query: string; ruleKeys?: string[]; limit?: number }): SourceResult[] {
     const limit = Math.min(Math.max(input.limit ?? 6, 0), 6);
     if (limit === 0) return [];
-    const rows = this.db.prepare(`SELECT c.*,d.title FROM source_chunks_fts f
+    const ruleKeys = [...new Set(input.ruleKeys ?? [])].slice(0, 20);
+    const exact = ruleKeys.length ? this.db.prepare(`SELECT c.*,d.title FROM rule_sections r
+      JOIN source_chunks c ON c.id=r.chunk_id JOIN source_documents d ON d.id=c.document_id
+      WHERE c.document_id='srd-5.1' AND c.edition='SRD_5_1' AND c.content_kind='MECHANICS'
+      AND (r.id IN (${ruleKeys.map(() => "?").join(",")}) OR r.rule_key IN (${ruleKeys.map(() => "?").join(",")}))
+      ORDER BY c.id LIMIT ?`).all(...ruleKeys, ...ruleKeys, limit) as unknown as ChunkRow[] : [];
+    const ranked = exact.length >= limit ? [] : this.db.prepare(`SELECT c.*,d.title FROM source_chunks_fts f
       JOIN source_chunks c ON c.id=f.chunk_id JOIN source_documents d ON d.id=c.document_id
       WHERE source_chunks_fts MATCH ? AND c.document_id='srd-5.1' AND c.edition='SRD_5_1' AND c.content_kind='MECHANICS'
       ORDER BY bm25(source_chunks_fts),c.id LIMIT ?`).all(safeFtsQuery(input.query), limit) as unknown as ChunkRow[];
+    const rows = [...exact, ...ranked.filter((row) => !exact.some(({ id }) => id === row.id))].slice(0, limit);
     return boundPassages(rows.map((row) => ({ kind: "RULE", id: row.id, passage: delimitSourceData(row.text), citation: citation(row),
       confidenceStatus: row.confidence_status })), 6);
   }

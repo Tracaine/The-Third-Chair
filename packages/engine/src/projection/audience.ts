@@ -1,10 +1,10 @@
 import type { Audience, PlayerSeat } from "@third-chair/contracts";
 
-export function allowedAudiences(viewer: PlayerSeat): ReadonlySet<Audience> {
+export function allowedAudiences(viewer: PlayerSeat | "PARTY"): ReadonlySet<Audience> {
   return new Set(["PUBLIC", "PARTY", viewer]);
 }
 
-export function visible<T extends { audience: Audience }>(records: readonly T[], viewer: PlayerSeat): T[] {
+export function visible<T extends { audience: Audience }>(records: readonly T[], viewer: PlayerSeat | "PARTY"): T[] {
   const allowed = allowedAudiences(viewer);
   return records.filter((record) => allowed.has(record.audience));
 }

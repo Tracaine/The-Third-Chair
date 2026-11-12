@@ -7,7 +7,7 @@ interface OpenSection { heading: string; pageStart: number; pageEnd: number; lin
 
 function hash(text: string): string { return createHash("sha256").update(text).digest("hex"); }
 
-export function parseSrdPages(pages: readonly TextPage[]): { chunks: SourceChunk[]; ruleSections: RuleSection[]; characterOptions: [] } {
+export function parseSrdPages(pages: readonly TextPage[]): { chunks: SourceChunk[]; ruleSections: RuleSection[] } {
   const sections: OpenSection[] = [];
   let current: OpenSection | undefined;
   const finish = () => {
@@ -42,5 +42,5 @@ export function parseSrdPages(pages: readonly TextPage[]): { chunks: SourceChunk
       confidenceStatus: "NATIVE_TEXT", text, textSha256 });
     ruleSections.push({ id: `rule:${id}`, chunkId: id, ruleKey, category: "general" });
   }
-  return { chunks, ruleSections, characterOptions: [] };
+  return { chunks, ruleSections };
 }

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { zodResponseFormat } from "openai/helpers/zod";
-import { TurnProposalSchema } from "@third-chair/contracts";
+import { CampaignSpineProposalSchema, TurnProposalSchema } from "@third-chair/contracts";
 import { createDirectorTools } from "../src/tools/index.js";
 
 function assertStrictApiSchema(value: unknown, path = "$"): void {
@@ -24,6 +24,11 @@ describe("live structured output schemas", () => {
     const format = zodResponseFormat(TurnProposalSchema, "turn_proposal");
     expect(() => format).not.toThrow();
     assertStrictApiSchema(format.json_schema.schema, "$.directorOutput");
+  });
+
+  test("campaign spine output includes discovery conditions in a strict API schema", () => {
+    const format = zodResponseFormat(CampaignSpineProposalSchema, "campaign_spine");
+    assertStrictApiSchema(format.json_schema.schema, "$.campaignSpineOutput");
   });
 
   test("complete Director tool set generates strict Responses API schemas", () => {

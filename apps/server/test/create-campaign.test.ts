@@ -9,7 +9,7 @@ describe("create_campaign MCP boundary", () => {
     const safe = { campaignId: "test_campaign_mcp", sourcePackHash: "a".repeat(64), visibleOpening: "A caravan is detained at the bridge.", characters: [
       { ...baseCard, actorId: "test_actor_bill", controller: "BILL" as const, name: "Alden" },
       { ...baseCard, actorId: "test_actor_raven", controller: "RAVEN" as const, name: "Vesper" },
-    ], currentDecision: { id: "test_decision_mcp", stateVersion: 0, mode: "EXPLORATION", owner: "BOTH", situation: "A caravan is detained at the bridge.", eligibleActorIds: ["test_actor_bill", "test_actor_raven"], constraints: "Choose independently.", requiredInput: "Bill and Raven each declare an action.", legalOptions: [] }, stateHash: "f".repeat(64) };
+    ], currentDecision: { id: "test_decision_mcp", stateVersion: 0, mode: "EXPLORATION" as const, owner: "BOTH" as const, situation: "A caravan is detained at the bridge.", eligibleActorIds: ["test_actor_bill", "test_actor_raven"], constraints: "Choose independently.", requiredInput: "Bill and Raven each declare an action.", legalOptions: [] }, stateHash: "f".repeat(64) };
     const result = await createCampaign({
       campaignCreator: { create: async () => safe } as never,
       sourcePack: { manifest: () => ({ sourcePackManifestHash: "a".repeat(64) }) } as never,
@@ -17,6 +17,11 @@ describe("create_campaign MCP boundary", () => {
     }, input);
     expect(result.structuredContent).toMatchObject({ campaignId: "test_campaign_mcp", visibleOpening: safe.visibleOpening });
     expect(result.structuredContent.playerViewId).toBe(computePlayerViewId(safe.campaignId, 0, "RAVEN", safe.stateHash));
+    const bill = await createCampaign({ campaignCreator: { create: async () => safe },
+      sourcePack: { manifest: () => ({ sourcePackManifestHash: "a".repeat(64) }) }, ownerId: "Bill" },
+    { ...input, audience: "BILL" });
+    expect(bill.structuredContent).toMatchObject({ audience: "BILL",
+      playerViewId: computePlayerViewId(safe.campaignId, 0, "BILL", safe.stateHash) });
     expect(JSON.stringify(result)).not.toMatch(/centralTruth|rngSeed|spine|DIRECTOR/);
   });
 

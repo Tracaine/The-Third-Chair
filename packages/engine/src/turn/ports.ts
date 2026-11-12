@@ -46,10 +46,13 @@ export interface NarratorInput {
   readonly resolutions: readonly CheckResolution[];
   readonly visibleOperations: readonly WorldOperation[];
   readonly visibleEvents: readonly { readonly id: string }[];
-  readonly proposal: TurnProposal;
+  readonly proposal: Pick<TurnProposal, "narrativeBrief">;
 }
 export interface DirectorPort {
   propose(input: DirectorInput): Promise<TurnProposal> | TurnProposal;
   repair?(input: DirectorRepairInput, authoritative: DirectorInput): Promise<TurnProposal> | TurnProposal;
 }
-export interface NarratorPort { narrate(input: NarratorInput): Promise<Narration> | Narration; }
+export interface NarratorPort {
+  narrate(input: NarratorInput): Promise<Narration> | Narration;
+  narrateOpening?(view: PlayerView, opening: string): Promise<string> | string;
+}

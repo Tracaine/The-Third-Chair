@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import aliases from "../config/aliases.v1.json" with { type: "json" };
 import selection from "../config/frcs-selection.v1.json" with { type: "json" };
 import cases from "../test/fixtures/retrieval-cases.json" with { type: "json" };
+import { upgradeCharacterOptions } from "./upgrade-character-options.js";
 import { buildSourcePack } from "./build.js";
 import { openSourcePackReadOnly } from "./indexing/database.js";
 import { hashIdentityConfig, loadSourceConfig, verifySourceDocuments } from "./manifest.js";
@@ -11,6 +12,7 @@ import { SqliteSourcePackService } from "./retrieval/service.js";
 type CliArgs =
   | { command: "verify"; config: string }
   | { command: "build"; config: string; output: string }
+  | { command: "upgrade-characters"; config: string; database: string }
   | { command: "test-fixtures"; database: string }
   | { command: "query"; database: string; kind: "rules" | "lore" | "timeline"; query: string };
 
@@ -20,6 +22,8 @@ export function parseCliArgs(argv: string[]): CliArgs {
   if (command === "verify") return { command, config: value("--config") ?? "packages/source-pack/config/documents.v1.json" };
   if (command === "build") return { command, config: value("--config") ?? "packages/source-pack/config/documents.v1.json",
     output: value("--output") ?? "private/source-pack.sqlite" };
+  if (command === "upgrade-characters") return { command, config: value("--config") ?? "packages/source-pack/config/documents.v1.json",
+    database: value("--database") ?? "private/source-pack.sqlite" };
   if (command === "test-fixtures") return { command, database: value("--database") ?? "private/source-pack.sqlite" };
   if (command === "query") {
     const kind = value("--kind"); if (kind !== "rules" && kind !== "lore" && kind !== "timeline") throw new Error("CLI_KIND_REQUIRED");
@@ -42,6 +46,11 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
   if (args.command === "build") {
     const report = await buildSourcePack({ repositoryRoot: root, configPath: args.config, outputPath: args.output });
     process.stdout.write(`${JSON.stringify(report)}\n`); return;
+  }
+  if (args.command === "upgrade-characters") {
+    const report = await upgradeCharacterOptions(root, args.config, args.database);
+    process.stdout.write(`${JSON.stringify(report)}\n`);
+    return;
   }
   const db = openSourcePackReadOnly(resolve(root, args.database));
   try {

@@ -25,3 +25,5 @@ Do not write Bill or Raven speech, action, thoughts, feelings, consent, reaction
 # Output
 
 Return only the structured Narration. Copy required resolution and event IDs exactly once into their corresponding fields. Include every required event ID in `visibleEventIds`. End at the supplied next-decision pressure without answering it.
+
+When toneSettings specifies an opening scene, describe only the location and pressure established in the visible projection. Neither character has acted, and no roll or discovery has occurred. End at the point where the players can act.

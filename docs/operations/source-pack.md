@@ -40,3 +40,16 @@ This scan has no reliable printed folios at the three selection starts. The revi
 ## Privacy audit
 
 Before checkpointing, confirm `git ls-files project_sources private tmp` returns no paths and run `npm run verify:private`. Build reports are redacted and contain no source passages.
+
+## Upgrade a pack already in use
+
+Stop the server so it releases the read-only SQLite handle. Keep the verified SRD PDF at the configured path, then run this from the repository root.
+
+```powershell
+npm run source-pack -- upgrade-characters --database private/source-pack.sqlite
+npm run source-pack -- test-fixtures --database private/source-pack.sqlite
+```
+
+Expect `PASS` with a nonzero `characterOptions` count, or `ALREADY_CURRENT` on a repeat. The upgrade copies the existing database, adds the SRD catalog and its page references, verifies integrity, and promotes the copy. It keeps `source-pack.sqlite.previous` and preserves the source identity hash used by saved campaigns. It requires Poppler and the existing verified SRD PDF. Use the full `build` command for a fresh install.
+
+Existing sheets retain the stats, inventory, and discoveries already committed. New sheets use the rebuilt rules, including the SRD's Acolyte background and level-one class and ancestry choices. Resume existing campaigns with their current save. Start a new campaign to use the new sheets and generated opening from the beginning.

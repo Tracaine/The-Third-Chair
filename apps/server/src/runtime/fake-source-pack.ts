@@ -30,7 +30,7 @@ export function createFakeSourcePack(): SourcePackService {
     searchLore: ({ entityIds, limit }) => (!entityIds?.length || limit === 0 ? [] : [lore]),
     searchTimeline: () => [],
     getEntity: () => null,
-    manifest: () => ({ sourcePackManifestHash: "test_fake_source_pack" }),
+    manifest: () => ({ sourcePackManifestHash: "f".repeat(64) }),
     characterOptions: () => [],
   };
 }

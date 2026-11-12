@@ -4,7 +4,7 @@ import { createFakeSourcePack } from "@third-chair/server";
 describe("local gate source pack", () => {
   it("provides bounded deterministic rules and lore without private source files", () => {
     const sources = createFakeSourcePack();
-    expect(sources.manifest()).toEqual({ sourcePackManifestHash: "test_fake_source_pack" });
+    expect(sources.manifest()).toEqual({ sourcePackManifestHash: "f".repeat(64) });
     expect(sources.searchRules({ query: "cover", limit: 99 })).toEqual([
       expect.objectContaining({ kind: "RULE", id: "test_fake_rule_cover" }),
     ]);

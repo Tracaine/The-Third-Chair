@@ -2,7 +2,7 @@ import { z } from "zod";
 import { DecisionRequestSchema } from "./decisions.js";
 import { AudienceSchema, PersistedIdSchema } from "./ids.js";
 import { OutcomeTierSchema } from "./resolutions.js";
-import { CombatStateSchema } from "./world-state.js";
+import { CampaignProgressSchema, CombatStateSchema, LocationStateSchema, NpcStateSchema } from "./world-state.js";
 
 const Text = z.string().trim().min(1).max(2_000);
 const Base = z.object({ id: PersistedIdSchema, reason: Text, audience: AudienceSchema });
@@ -15,6 +15,8 @@ const WithCause = Base.extend({ cause: OperationCauseSchema });
 const Id = { actorId: PersistedIdSchema };
 export const WorldOperationSchema = z.discriminatedUnion("kind", [
   WithCause.extend({ kind: z.literal("SET_HP"), ...Id, value: z.number().int().min(-1000).max(1000) }).strict(),
+  WithCause.extend({ kind: z.literal("APPLY_DEATH_SAVE"), ...Id }).strict(),
+  WithCause.extend({ kind: z.literal("CAST_SPELL"), ...Id, spellId: PersistedIdSchema }).strict(),
   WithCause.extend({ kind: z.literal("SET_TEMP_HP"), ...Id, value: z.number().int().nonnegative().max(1000) }).strict(),
   WithCause.extend({ kind: z.literal("SPEND_RESOURCE"), ...Id, resourceId: PersistedIdSchema, amount: z.number().int().positive().max(1000) }).strict(),
   WithCause.extend({ kind: z.literal("RESTORE_RESOURCE"), ...Id, resourceId: PersistedIdSchema, amount: z.number().int().positive().max(1000) }).strict(),
@@ -26,6 +28,12 @@ export const WorldOperationSchema = z.discriminatedUnion("kind", [
   WithCause.extend({ kind: z.literal("SET_EQUIPPED"), itemId: PersistedIdSchema, slots: z.array(Text) }).strict(),
   WithCause.extend({ kind: z.literal("SET_COMBAT"), combat: CombatStateSchema.nullable() }).strict(),
   WithCause.extend({ kind: z.literal("ADVANCE_INITIATIVE") }).strict(),
+  WithCause.extend({ kind: z.literal("ADD_LOCATION"), location: LocationStateSchema }).strict(),
+  WithCause.extend({ kind: z.literal("ADD_NPC"), npc: NpcStateSchema }).strict(),
+  WithCause.extend({ kind: z.literal("OBSERVE_ENTITY"), entityType: z.enum(["NPC", "FACTION", "QUEST"]),
+    entityId: PersistedIdSchema, name: Text, status: Text }).strict(),
+  WithCause.extend({ kind: z.literal("DISCOVER_CLUE"), clueId: PersistedIdSchema }).strict(),
+  WithCause.extend({ kind: z.literal("SET_CAMPAIGN_PROGRESS"), progress: CampaignProgressSchema }).strict(),
   WithCause.extend({ kind: z.literal("ADD_FACT"), fact: z.object({ id: PersistedIdSchema, audience: AudienceSchema, kind: Text, text: Text }).strict() }).strict(),
   WithCause.extend({ kind: z.literal("ADD_EVENT"), event: z.object({ id: PersistedIdSchema, audience: AudienceSchema, kind: Text, text: Text }).strict(), intentActorId: PersistedIdSchema.nullish() }).strict(),
   WithCause.extend({ kind: z.literal("ADVANCE_CLOCK"), clockId: PersistedIdSchema, amount: z.number().int().positive().max(1000) }).strict(),

@@ -18,10 +18,10 @@ export function DecisionBanner({ decision, actorNames }: DecisionBannerProps) {
     <section className={`decision-banner decision-banner--${decision.owner.toLocaleLowerCase()}`} aria-labelledby="decision-heading">
       <div className="decision-banner__owner">
         <span className="kicker">Next at the table</span>
-        <h2 id="decision-heading">{ownerLabels[decision.owner]}</h2>
+        <h2 id="decision-heading">{decision.mode === "ENDED" ? "Campaign concluded" : ownerLabels[decision.owner]}</h2>
       </div>
       <div className="decision-banner__prompt">
-        <p>{decision.requiredInput ?? decision.situation}</p>
+        <p>{decision.requiredInput || decision.situation}</p>
         <span>{decision.mode.toLocaleLowerCase()}</span>
         {eligibleNames.length > 0 ? <span>{eligibleNames.join(" & ")}</span> : null}
       </div>

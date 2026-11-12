@@ -17,7 +17,7 @@ export function renderTerseNarration(turn: TurnRecord): Narration {
     return `Check ${resolution.id}: d${check.sides} [${resolution.naturalDice.join(", ")}], kept ${resolution.keptDie}, modifier ${signed(resolution.modifier)}, total ${resolution.total} vs DC ${resolution.target} — ${resolution.tier}.`;
   });
   const visibleEventIds = proposal.narrativeBrief.requiredEventIds.filter((id) =>
-    turn.candidateState!.events.some((event) => event.id === id && event.audience !== "DIRECTOR"));
+    turn.candidateState!.events.some((event) => event.id === id && (event.audience === "PUBLIC" || event.audience === "PARTY")));
   if (visibleEventIds.length !== proposal.narrativeBrief.requiredEventIds.length) throw new Error("TERSE_HIDDEN_OR_MISSING_EVENT");
   return NarrationSchema.parse({
     sceneText: [...required, proposal.narrativeBrief.summary].join("\n"), spokenNpcLines: [],

@@ -1,8 +1,8 @@
 import { Agent, type Tool } from "@openai/agents";
-import { TurnProposalSchema, type ActorIntent, type CheckResolution, type SourcePackService, type TurnProposal } from "@third-chair/contracts";
+import { TurnProposalSchema, type ActorIntent, type CheckResolution, type WorldState, type SourcePackService, type TurnProposal } from "@third-chair/contracts";
 import { InvalidDirectorProposalError, type DirectorInput, type DirectorPort, type DirectorRepairInput } from "@third-chair/engine";
 import type { AgentConfig } from "./config.js";
-import { buildDirectorInput } from "./context/director-context.js";
+import { buildDirectorInput, type DirectorSelection } from "./context/director-context.js";
 import { loadDirectorPrompt } from "./prompt-loader.js";
 import { AgentsSdkRunClient, type AgentRunClient, type SafeUsageCounters } from "./runner.js";
 import { serializeDirectorRepairInput } from "./repair.js";
@@ -33,6 +33,26 @@ export function createDirectorAgent(config: AgentConfig, tools: readonly Tool<Di
     modelSettings: { reasoning: { effort: config.directorReasoning }, text: { verbosity: "low" }, parallelToolCalls: false },
     tools: [...tools], outputType: TurnProposalSchema,
   });
+}
+
+function campaignSelection(state: WorldState, intents: readonly ActorIntent[]): DirectorSelection {
+  const targets = new Set(intents.flatMap((intent) => intent.targetIds));
+  const tail = <T extends { id: string }>(records: T[], max: number) =>
+    [...new Set([...records.filter(({ id }) => targets.has(id)), ...records.slice(-max)].map(({ id }) => id))];
+  const core = state.facts.filter(({ kind }) => ["Central Truth", "Outcome"].includes(kind)).slice(0, 4);
+  const clues = state.facts.filter(({ kind }) => ["Clue", "Undiscovered Clue", "Discovery Condition"].includes(kind));
+  const locations = Object.values(state.locations);
+  const activeLocations = Object.values(state.actors).flatMap(({ locationId }) => locationId ? [locationId] : []);
+  return {
+    knownLocationIds: [...new Set([...activeLocations, ...tail(locations, 4)])],
+    relatedNpcIds: tail(Object.values(state.npcs), 6),
+    relatedFactionIds: tail(Object.values(state.factions), 4),
+    activeQuestIds: tail(Object.values(state.quests), 4),
+    relevantClockIds: tail(Object.values(state.clocks), 4),
+    relevantFactIds: [...core.map(({ id }) => id), ...tail(clues, 12), ...tail(state.facts.filter(({ audience, kind }) => ["PUBLIC", "PARTY"].includes(audience) && kind !== "Provenance"), 4)],
+    relevantEventIds: tail(state.events, 4),
+    relevantFlagIds: tail(state.flags, 4),
+  };
 }
 
 function requireLockedIntents(input: DirectorInput): void {
@@ -90,10 +110,12 @@ function validateBoundaries(input: DirectorInput, proposal: TurnProposal, resolu
     }
     if (cause.type === "UNCONTESTED") {
       if (!intentFor(cause.intentActorId) && !directorOwns(cause.intentActorId)) failAgency();
-      if ("actorId" in operation && operation.actorId !== cause.intentActorId) failAgency();
+      if ("actorId" in operation && operation.actorId !== cause.intentActorId
+        && !(operation.kind === "SET_HP" && directorOwns(cause.intentActorId))) failAgency();
       if (operation.kind === "ADD_EVENT" && operation.intentActorId != null
         && operation.intentActorId !== cause.intentActorId) failAgency();
     }
+    if (operation.kind === "CAST_SPELL" && !intentFor(operation.actorId)?.committedResourceIds.includes(operation.spellId)) failAgency();
     if (operation.kind === "ADD_EVENT") {
       const id = operation.intentActorId;
       const actor = id == null ? undefined : input.state.actors[id];
@@ -175,6 +197,7 @@ export class OpenAiDirectorAdapter implements DirectorPort {
     let bounded;
     try {
       bounded = buildDirectorInput({ worldState: input.state, lockedIntents: input.intents,
+        selection: campaignSelection(input.state, input.intents),
         persistedPlan: input.persistedPlan, persistedResolutions: input.persistedResolutions });
     } catch { throw new Error("DIRECTOR_INVALID_INPUT"); }
     const config = this.#options.config;

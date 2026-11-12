@@ -46,7 +46,7 @@ export function renderTable(deps: { campaigns: CampaignRepository; turns: TurnRe
     return [...(turn.resolutions ?? [])].reverse().flatMap((resolution) => {
       if (resolution.visibility !== "PUBLIC") return [];
       const visible = consequenceAvailable
-        ? { ...resolution, consequence: sceneText.data }
+        ? { ...resolution, consequence: sceneText.data?.slice(0, 2_000) }
         : resolution;
       consequenceAvailable = false;
       return [visible];

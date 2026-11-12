@@ -32,8 +32,9 @@ describe("campaign builder", () => {
     try {
       let calls = 0;
       const creator = createCampaignBuilder({ campaigns: createCampaignRepository(temp.db), creationRequests: createCampaignCreationRepository(temp.db), sourcePack: { manifest: () => ({ sourcePackManifestHash: "a".repeat(64) }) } as never, loadCharacterCatalog: () => catalog, spine: { generate: async () => { calls += 1; return spine; } }, ids: { campaign: () => "test_campaign_created", branch: () => "test_branch_created", location: () => "test_location_created", scene: () => "test_scene_created", decision: () => "test_decision_created", record: (kind, key) => `test_${kind}_${key}` }, rngSeed: () => new Uint8Array(32).fill(7), now: () => "2026-09-06T12:00:00.000Z" });
-      const first = await creator.create(request());
-      const second = await creator.create(request());
+      const quickstart = { ...request(), creationMode: "QUICKSTART" };
+      const first = await creator.create(quickstart);
+      const second = await creator.create(quickstart);
       expect(second.campaignId).toBe(first.campaignId);
       expect(calls).toBe(1);
       const campaign = createCampaignRepository(temp.db).getCampaign(first.campaignId);
@@ -41,7 +42,9 @@ describe("campaign builder", () => {
       expect(campaign.currentDecision.owner).toBe("BOTH");
       expect(campaign.currentState.clocks["test_clock_seizure"]).toMatchObject({ audience: "DIRECTOR", current: 0, maximum: 6 });
       const playerView = projectPlayerView(campaign.currentState, "RAVEN");
-      expect(playerView.facts.filter((fact) => fact.kind === "Clue")).toHaveLength(3);
+      expect(playerView.facts.filter((fact) => fact.kind === "Clue")).toHaveLength(0);
+      expect(campaign.currentState.facts.filter((fact) => fact.kind === "Undiscovered Clue")).toHaveLength(3);
+      expect(first.visibleOpening).toContain("Blackfeather Bridge");
       expect(JSON.stringify(playerView)).not.toMatch(/The order is forged|The caravan is freed|Seizure/);
       expect(first).not.toHaveProperty("spine");
       expect(JSON.stringify(first)).not.toContain("The order is forged");

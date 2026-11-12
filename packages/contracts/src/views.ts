@@ -1,6 +1,8 @@
+import { CharacterMechanicsSchema } from "./characters.js";
 import { z } from "zod";
 import { DecisionModeSchema } from "./decisions.js";
 import { DecisionOwnerSchema, PersistedIdSchema, PlayerSeatSchema } from "./ids.js";
+import { CampaignProgressSchema } from "./world-state.js";
 import { JournalAudienceSchema } from "./journal.js";
 
 const VisibleTextSchema = z.string().trim().max(2_000);
@@ -44,6 +46,7 @@ export const PlayerActorViewSchema = z.object({
   backgroundSourceKey: BoundedNameSchema.optional(),
   saves: z.record(z.string(), z.number().int()).optional(),
   skills: z.record(z.string(), z.number().int()).optional(),
+  mechanics: CharacterMechanicsSchema.optional(),
   spellSlots: z.record(z.string(), z.object({ current: NonnegativeIntSchema, maximum: NonnegativeIntSchema }).strict()).optional(),
   spells: z.array(BoundedNameSchema).optional(),
   equipment: z.array(z.object({
@@ -69,6 +72,8 @@ export const PlayerViewSchema = z.object({
   worldDate: z.object({ yearDr: z.number().int(), month: z.string(), day: z.number().int().positive() }).strict(),
   location: VisibleEntitySchema,
   sceneId: PersistedIdSchema,
+  campaignProgress: CampaignProgressSchema.optional(),
+  knownLocations: z.array(VisibleEntitySchema).optional(),
   actors: z.array(PlayerActorViewSchema),
   inventory: z.array(z.object({
     id: PersistedIdSchema, name: BoundedNameSchema, ownerActorId: PersistedIdSchema.nullable(),

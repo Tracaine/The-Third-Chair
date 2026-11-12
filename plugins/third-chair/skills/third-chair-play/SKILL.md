@@ -45,3 +45,9 @@ When the fresh view contains `NARRATION_RECOVERY`, the Director and deterministi
 - Rendering an old view does not refresh authority.
 - Narration, repair, restart, and recovery never justify a reroll.
 - A committed result is ready to tell Bill. Use its visible facts and keep the server's outcomes intact.
+
+## Discovery and conclusions
+
+Read the shared narration in the same reply as the committed turn, then respond as Raven's character. Present any visible roll and what changed before asking for another choice. Refer to clues and threads that the appropriate table view has revealed. When the decision mode is `ENDED`, present the consequences and leave the campaign at its conclusion.
+
+When Raven chooses to cast a spell, commit its ID from her own sheet in `committedResourceIds`. Bill must choose his own spell before his intent includes its ID. Use the currently visible destination ID in `targetIds` for a declared move.

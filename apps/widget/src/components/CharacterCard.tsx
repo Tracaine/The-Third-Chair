@@ -22,6 +22,8 @@ export function CharacterCard({ actor }: CharacterCardProps) {
   const hpPercent = actor.maxHp === 0 ? 0 : Math.max(0, Math.min(100, (actor.currentHp / actor.maxHp) * 100));
   const identity = [actor.ancestrySourceKey, actor.classSourceKey, actor.backgroundSourceKey].filter(Boolean).map((part) => title(part!)).join(" · ");
   const spellSlots = Object.entries(actor.spellSlots ?? {});
+  const spellcasting = actor.mechanics?.spellcasting;
+  const spellName = (key: string) => spellcasting?.spellNames[key] ?? (key === actor.mechanics?.ancestryCantrip?.id ? actor.mechanics.ancestryCantrip.name : title(key));
 
   return (
     <article className={`character-card panel character-card--${actor.controller.toLocaleLowerCase()}`}>
@@ -56,24 +58,37 @@ export function CharacterCard({ actor }: CharacterCardProps) {
             <h3>Skills</h3>
             {actor.skills && Object.keys(actor.skills).length > 0 ? (
               <ul className="sheet-list">{Object.entries(actor.skills).map(([name, value]) => <li key={name}><span>{title(name)}</span><strong>{signed(value)}</strong></li>)}</ul>
-            ) : <p className="quiet">None listed</p>}
+            ) : <p className="quiet">{actor.skills ? "None listed" : "Unavailable in this view"}</p>}
           </section>
           <section aria-label={`${actor.name} saving throws`}>
             <h3>Saving Throws</h3>
             {actor.saves && Object.keys(actor.saves).length > 0 ? (
               <ul className="sheet-list sheet-list--compact">{Object.entries(actor.saves).map(([name, value]) => <li key={name}><span>{abilityLabels[name as keyof PlayerActorView["abilities"]] ?? title(name)}</span><strong>{signed(value)}</strong></li>)}</ul>
-            ) : <p className="quiet">None listed</p>}
+            ) : <p className="quiet">{actor.saves ? "None listed" : "Unavailable in this view"}</p>}
           </section>
         </div>
         <section aria-label={`${actor.name} equipment`}>
           <h3>Equipment</h3>
-          {actor.equipment && actor.equipment.length > 0 ? <p className="sheet-prose">{actor.equipment.map((item) => `${item.name}${item.quantity > 1 ? ` ×${item.quantity}` : ""}`).join(" · ")}</p> : <p className="quiet">Traveling light</p>}
+          {actor.equipment && actor.equipment.length > 0 ? <p className="sheet-prose">{actor.equipment.map((item) => `${item.name}${item.quantity > 1 ? ` ×${item.quantity}` : ""}`).join(" · ")}</p> : <p className="quiet">{actor.equipment ? "Traveling light" : "Unavailable in this view"}</p>}
         </section>
-        {(actor.spells?.length || spellSlots.length > 0) ? <section aria-label={`${actor.name} spellcasting`}>
+        {actor.mechanics && <section aria-label={`${actor.name} features and proficiencies`}>
+          <h3>Features</h3>
+          <p className="sheet-prose">{actor.mechanics.features.join(" · ")}</p>
+          <h3>Proficiencies</h3>
+          <p className="sheet-prose">{actor.mechanics.proficiencies.join(" · ")}</p>
+          <h3>Languages</h3>
+          <p className="sheet-prose">{actor.mechanics.languages.join(" · ")}</p>
+        </section>}
+        <section aria-label={`${actor.name} spellcasting`}>
           <h3>Spellcraft</h3>
-          <p className="sheet-prose">{actor.spells?.map(title).join(" · ")}</p>
+          <p className="sheet-prose">{actor.spells?.length ? actor.spells.map(spellName).join(" · ")
+            : actor.spells ? "No spells" : "Unavailable in this view"}</p>
+          {spellcasting && <p className="sheet-prose">Save DC {spellcasting.saveDc} · Spell attack {signed(spellcasting.attackBonus)}</p>}
+          {spellcasting && spellcasting.spellbook.length > 0 && <p className="sheet-prose">
+            Spellbook · {spellcasting.spellbook.map(spellName).join(" · ")}
+          </p>}
           {spellSlots.length > 0 && <ul className="slot-list">{spellSlots.map(([level, slots]) => <li key={level}>Level {level}<strong>{slots.current}/{slots.maximum} slots</strong></li>)}</ul>}
-        </section> : null}
+        </section>
         <section aria-label={`${actor.name} conditions`}>
           <h3>Conditions</h3>
           {actor.conditions.length > 0 ? (
@@ -88,7 +103,7 @@ export function CharacterCard({ actor }: CharacterCardProps) {
                 <li key={resource.id}><span>{resource.name}</span><strong>{resource.current}/{resource.maximum}</strong></li>
               ))}
             </ul>
-          ) : <p className="quiet">No limited resources</p>}
+          ) : <p className="quiet">{actor.resources ? "No limited resources" : "Unavailable in this view"}</p>}
         </section>
       </div>
     </article>

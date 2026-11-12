@@ -30,15 +30,23 @@ export function assertNoForbiddenSentinels(value: unknown, sentinels: readonly s
   visit(value);
 }
 
-function visibleFacts(records: readonly { id: string; audience: Audience; kind: string; text: string }[], viewer: PlayerSeat) {
+function visibleFacts(records: readonly { id: string; audience: Audience; kind: string; text: string }[], viewer: PlayerSeat | "PARTY") {
   return visible(records, viewer).map(({ id, kind, text }) => ({ id, kind, text }));
 }
 
-function entityView(record: { id: string; name: string; status: string; facts: readonly { id: string; audience: Audience; kind: string; text: string }[] }, viewer: PlayerSeat) {
+function entityView(record: { id: string; name: string; status: string; facts: readonly { id: string; audience: Audience; kind: string; text: string }[] }, viewer: PlayerSeat | "PARTY") {
   return { id: record.id, name: record.name, status: record.status, facts: visibleFacts(record.facts, viewer) };
 }
 
-export function projectPlayerView(state: WorldState, viewer: PlayerSeat): PlayerView {
+export function projectPlayerView(state: WorldState, seat: PlayerSeat): PlayerView {
+  return project(state, seat);
+}
+
+export function projectSharedNarrationView(state: WorldState): PlayerView {
+  return project(state, "PARTY");
+}
+
+function project(state: WorldState, viewer: PlayerSeat | "PARTY"): PlayerView {
   const allowed = allowedAudiences(viewer);
   const visibleNpcs = visible(Object.values(state.npcs), viewer);
   const knownCombatIds = new Set([
@@ -59,7 +67,8 @@ export function projectPlayerView(state: WorldState, viewer: PlayerSeat): Player
       legalOptions: [...state.currentDecision.legalOptions],
     } : {}),
   };
-  const location = state.locations[state.metadata.currentLocationId];
+  const seatActor = Object.values(state.actors).find((actor) => actor.controller === viewer);
+  const location = state.locations[seatActor?.locationId ?? state.metadata.currentLocationId];
   if (!location || !allowed.has(location.audience)) throw new Error("Current location is not visible to player");
 
   const view = {
@@ -73,6 +82,9 @@ export function projectPlayerView(state: WorldState, viewer: PlayerSeat): Player
     },
     location: entityView(location, viewer),
     sceneId: state.metadata.sceneId,
+    ...(state.campaignProgress ? { campaignProgress: state.campaignProgress } : {}),
+    ...(Object.keys(state.locations).length > 1 ? { knownLocations: visible(Object.values(state.locations), viewer)
+      .map((record) => entityView(record, viewer)) } : {}),
     actors: Object.entries(state.actors)
       .filter(([, actor]) => actor.controller !== "DIRECTOR")
       .map(([id, actor]) => ({
@@ -91,8 +103,9 @@ export function projectPlayerView(state: WorldState, viewer: PlayerSeat): Player
         currentHp: actor.currentHp, temporaryHp: actor.temporaryHp, speed: actor.speed, conditions: [...actor.conditions],
         deathSaves: { successes: actor.deathSaves.successes, failures: actor.deathSaves.failures }, publicNotes: [...actor.publicNotes],
         ...(actor.controller === viewer ? {
-          saves: { ...(actor.saves ?? {}) },
-          skills: { ...(actor.skills ?? {}) },
+          ...(actor.saves ? { saves: actor.saves } : {}),
+          ...(actor.skills ? { skills: actor.skills } : {}),
+          ...(actor.mechanics ? { mechanics: actor.mechanics } : {}),
           spellSlots: Object.fromEntries(Object.entries(actor.spellSlots ?? {}).map(([level, slots]) => [level, { ...slots }])),
           spells: [...actor.spells],
           equipment: Object.values(state.inventory)

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { DecisionRequestSchema, type DecisionRequest } from "./decisions.js";
 import { AudienceSchema, PersistedIdSchema, SeatSchema, type PlayerSeat } from "./ids.js";
 import { ActorIntentSchema, type ActorIntent } from "./intents.js";
-import { AbilityNameSchema, SpellSlotStateSchema } from "./characters.js";
+import { AbilityNameSchema, CharacterMechanicsSchema, SpellSlotStateSchema } from "./characters.js";
 
 const BoundedTextSchema = z.string().trim().max(2_000);
 const BoundedNameSchema = z.string().trim().min(1).max(200);
@@ -45,6 +45,7 @@ export const ActorStateSchema = z.object({
   armorClass: NonnegativeIntSchema,
   maxHp: NonnegativeIntSchema,
   currentHp: z.number().int(),
+  locationId: PersistedIdSchema.optional(),
   temporaryHp: NonnegativeIntSchema,
   speed: NonnegativeIntSchema,
   conditions: z.array(BoundedNameSchema),
@@ -57,6 +58,7 @@ export const ActorStateSchema = z.object({
   saveProficiencies: z.array(AbilityNameSchema).optional(),
   skills: z.record(BoundedNameSchema, z.number().int()).optional(),
   skillProficiencies: z.array(BoundedNameSchema).optional(),
+  mechanics: CharacterMechanicsSchema.optional(),
   spellSlots: z.record(z.string().regex(/^[1-9]$/), SpellSlotStateSchema).optional(),
   featureSourceReferenceIds: z.array(z.string().trim().min(1).max(300)).optional(),
   sourceReferenceIds: z.array(z.string().trim().min(1).max(300)).optional(),
@@ -121,6 +123,12 @@ export const ClockStateSchema = z.object({
   facts: z.array(ScopedFactSchema),
 }).strict();
 
+export const CampaignProgressSchema = z.discriminatedUnion("phase", [
+  z.object({ phase: z.enum(["OPENING", "DEVELOPMENT", "CLIMAX"]), milestone: BoundedTextSchema }).strict(),
+  z.object({ phase: z.literal("ENDED"), milestone: BoundedTextSchema,
+    outcome: z.enum(["SUCCESS", "FAILURE", "ABANDONED", "PARTY_DEFEATED", "OTHER"]) }).strict(),
+]);
+
 export const WorldStateSchema = z.object({
   metadata: z.object({
     schemaVersion: z.literal(1),
@@ -142,6 +150,8 @@ export const WorldStateSchema = z.object({
   actors: z.record(PersistedIdSchema, ActorStateSchema),
   inventory: z.record(PersistedIdSchema, InventoryItemSchema),
   combat: CombatStateSchema.nullable(),
+  campaignProgress: CampaignProgressSchema.optional(),
+  openingNarration: z.string().min(1).max(8000).optional(),
   locations: z.record(PersistedIdSchema, LocationStateSchema),
   npcs: z.record(PersistedIdSchema, NpcStateSchema),
   factions: z.record(PersistedIdSchema, FactionStateSchema),
@@ -168,6 +178,7 @@ export function validateIntentsForDecision(
   currentState: WorldState,
 ): void {
   const parsedDecision = DecisionRequestSchema.parse(decision);
+  if (parsedDecision.mode === "ENDED") throw new Error("CAMPAIGN_ENDED");
   const parsedIntents = z.array(ActorIntentSchema).parse(intents);
   const suppliedSeats = new Set<PlayerSeat>();
 
@@ -190,12 +201,13 @@ export function validateIntentsForDecision(
     }
     const actor = currentState.actors[intent.actorId];
     if (!actor) throw new Error(`Actor ${intent.actorId} does not exist in current state`);
+    if (actor.conditions.some((condition) => condition.toLowerCase() === "dead") || actor.deathSaves.failures === 3) throw new Error("CHARACTER_DEAD");
     if (actor.controller !== intent.seat) {
       throw new Error(`Actor ${intent.actorId} is controlled by ${actor.controller}`);
     }
     if (intent.mode === "ACT") {
       for (const resourceId of intent.committedResourceIds) {
-        if (!actor.resources[resourceId]) {
+        if (!actor.resources[resourceId] && !actor.spells.includes(resourceId) && !actor.equipmentIds.includes(resourceId)) {
           throw new Error(`Actor ${intent.actorId} does not own resource ${resourceId}`);
         }
       }

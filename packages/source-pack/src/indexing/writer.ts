@@ -1,3 +1,4 @@
+import type { StructuredCharacterOption } from "@third-chair/contracts";
 import type { DatabaseSync } from "node:sqlite";
 import type { EntityRecord, RuleSection, SourceChunk, SourceDocumentRecord, TimelineEdge, TimelineEvent } from "./types.js";
 
@@ -15,11 +16,11 @@ export class SourcePackWriter {
         document.extractionMethod, JSON.stringify(document.permittedKinds));
   }
 
-  insertChunks(chunks: readonly SourceChunk[]): void {
-    for (let offset = 0; offset < chunks.length; offset += 500) this.insertChunkBatch(chunks.slice(offset, offset + 500));
+  insertChunks(chunks: readonly SourceChunk[], searchable = true): void {
+    for (let offset = 0; offset < chunks.length; offset += 500) this.insertChunkBatch(chunks.slice(offset, offset + 500), searchable);
   }
 
-  private insertChunkBatch(chunks: readonly SourceChunk[]): void {
+  private insertChunkBatch(chunks: readonly SourceChunk[], searchable: boolean): void {
     const insert = this.db.prepare(`INSERT INTO source_chunks(
       id,document_id,page_start,page_end,heading_path_json,edition,content_kind,region,date_start_dr,date_end_dr,
       ocr_confidence,confidence_status,text,text_sha256) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
@@ -33,7 +34,7 @@ export class SourcePackWriter {
         insert.run(chunk.id, chunk.documentId, chunk.pageStart, chunk.pageEnd, JSON.stringify(chunk.headingPath), chunk.edition,
           chunk.contentKind, chunk.region ?? null, chunk.dateStartDr ?? null, chunk.dateEndDr ?? null,
           chunk.ocrConfidence ?? null, chunk.confidenceStatus, chunk.text, chunk.textSha256);
-        insertFts.run(chunk.id, chunk.headingPath.join(" > "), (chunk.aliases ?? []).join(" "), chunk.text);
+        if (searchable) insertFts.run(chunk.id, chunk.headingPath.join(" > "), (chunk.aliases ?? []).join(" "), chunk.text);
       }
       this.db.exec("COMMIT");
     } catch (error) { if (this.db.isTransaction) this.db.exec("ROLLBACK"); throw error; }
@@ -53,6 +54,21 @@ export class SourcePackWriter {
   insertRuleSections(items: readonly RuleSection[]): void {
     const statement = this.db.prepare("INSERT INTO rule_sections(id,chunk_id,rule_key,category) VALUES (?,?,?,?)");
     for (const item of items) statement.run(item.id, item.chunkId, item.ruleKey, item.category);
+  }
+
+  insertCharacterCatalog(catalog: { chunks: readonly SourceChunk[]; ruleSections: readonly RuleSection[];
+    characterOptions: readonly StructuredCharacterOption[] }): void {
+    this.insertChunks(catalog.chunks, false);
+    this.insertRuleSections(catalog.ruleSections);
+    this.insertCharacterOptions(catalog.characterOptions);
+    this.insertManifest({ characterOptionsRevision: 1 });
+  }
+
+  insertCharacterOptions(options: readonly StructuredCharacterOption[]): void {
+    const statement = this.db.prepare(`INSERT INTO character_options(option_key,option_kind,display_name,rule_section_id,option_json)
+      VALUES (?,?,?,?,?)`);
+    for (const option of options) statement.run(option.optionKey, option.optionKind, option.displayName,
+      option.ruleSectionId, JSON.stringify(option.optionJson));
   }
 
   insertTimeline(events: readonly TimelineEvent[], edges: readonly TimelineEdge[]): void {

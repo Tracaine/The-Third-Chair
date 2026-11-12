@@ -19,6 +19,8 @@ const TableRulingSchema = WorldStateSchema.shape.table.shape.houseRules.element;
 const StateSliceSchema = z.object({
   metadata: WorldStateSchema.shape.metadata,
   location: LocationStateSchema,
+  knownLocations: z.array(LocationStateSchema).optional(),
+  campaignProgress: WorldStateSchema.shape.campaignProgress,
   actors: z.array(ActorStateSchema.extend({ id: z.string() }).strict()),
   inventory: z.array(InventoryItemSchema), combat: WorldStateSchema.shape.combat,
   npcs: z.array(NpcStateSchema), factions: z.array(FactionStateSchema), quests: z.array(QuestStateSchema), clocks: z.array(ClockStateSchema),
@@ -48,6 +50,7 @@ export const DirectorInputSchema = z.object({
 export type DirectorInput = z.infer<typeof DirectorInputSchema>;
 
 export interface DirectorSelection {
+  knownLocationIds?: readonly string[];
   relatedNpcIds?: readonly string[];
   relatedFactionIds?: readonly string[];
   activeQuestIds?: readonly string[];
@@ -95,6 +98,8 @@ export function buildDirectorInput(args: DirectorBuildInput): DirectorInput {
   const state = checked("state", StateSliceSchema, {
     metadata: world.metadata, tableSettings,
     location: world.locations[world.metadata.currentLocationId],
+    ...(selection.knownLocationIds ? { knownLocations: pick(world.locations, new Set(selection.knownLocationIds)) } : {}),
+    ...(world.campaignProgress ? { campaignProgress: world.campaignProgress } : {}),
     actors: [...actorIds].sort().map((id) => ({ id, ...world.actors[id]! })), inventory,
     combat: world.combat && world.combat.initiativeOrder.some((id) => seeds.has(id)) ? world.combat : null,
     npcs: pick(world.npcs, related), factions: pick(world.factions, related),

@@ -18,7 +18,8 @@ import { sha256Json } from "../hash.js";
 import { buildLevelOneCharacter } from "./character-builder.js";
 import type { CharacterCatalog } from "./catalog.js";
 import { validateCharacterOwnership } from "./validate-character.js";
-import { createQuickstartCampaignSpine } from "./quickstart-spine.js";
+import { projectSharedNarrationView } from "../projection/player-view.js";
+import type { NarratorPort } from "../turn/ports.js";
 
 export interface CampaignSpinePort {
   generate(input: CampaignSpineInput): Promise<CampaignSpineProposal>;
@@ -48,6 +49,7 @@ export interface CampaignBuilderDependencies {
   readonly sourcePack: Pick<SourcePackService, "manifest">;
   readonly loadCharacterCatalog: () => CharacterCatalog;
   readonly spine: CampaignSpinePort;
+  readonly narrator?: NarratorPort;
   readonly ids?: Partial<IdFactory>;
   readonly rngSeed?: () => Uint8Array;
   readonly now?: () => string;
@@ -93,6 +95,7 @@ function actor(build: CharacterBuild, equipmentIds: readonly string[]) {
     skills: build.skills,
     skillProficiencies: build.skillProficiencies,
     spellSlots: build.spellSlots,
+    ...(build.mechanics ? { mechanics: build.mechanics } : {}),
     featureSourceReferenceIds: build.featureSourceReferenceIds,
     sourceReferenceIds: build.sourceReferenceIds,
     characterHook: build.characterHook,
@@ -124,7 +127,8 @@ function buildInitialState(args: {
     const id = args.recordId("item", `${build.actorId}_${catalogId}`);
     runtimeEquipment.set(build.actorId, [...(runtimeEquipment.get(build.actorId) ?? []), id]);
     return [id, { id, name: catalog.equipment[catalogId]?.displayName ?? catalogId,
-      ownerActorId: build.actorId, containerId: null, quantity: 1, equippedSlots: [], facts: [] }];
+      ownerActorId: build.actorId, containerId: null, quantity: build.equipmentQuantities?.[catalogId] ?? 1,
+      equippedSlots: build.equipmentSlots?.[catalogId] ?? [], facts: [] }];
   })));
   const decision = {
     id: args.decisionId,
@@ -132,7 +136,7 @@ function buildInitialState(args: {
     mode: "EXPLORATION" as const,
     owner: "BOTH" as const,
     eligibleActorIds: [bill.actorId, raven.actorId],
-    situation: `${spine.opening.locationName}: ${spine.opening.pressure.text}`,
+    situation: `${spine.opening.locationName}: ${spine.opening.pressure.text}`.slice(0, 2000),
     constraints: "Bill and Raven choose only their own character's action.",
     requiredInput: "Bill and Raven each declare an action, desired outcome, and approach.",
     legalOptions: [],
@@ -149,16 +153,18 @@ function buildInitialState(args: {
       ],
     },
   };
+  const clockIds = new Map(spine.factions.map(({ clock }) => [clock.key, args.recordId("clock", clock.key)]));
   const factions = Object.fromEntries(spine.factions.map((faction) => {
     const id = args.recordId("faction", faction.key);
     return [id, { id, audience: faction.goal.audience, name: faction.name, status: "UNREVEALED", facts: [
       { id: args.recordId("fact", `faction_${faction.key}`), audience: faction.goal.audience, kind: "Goal", text: faction.goal.text },
+      { id: args.recordId("fact", `faction_clock_${faction.key}`), audience: "DIRECTOR", kind: "Faction Clock", text: clockIds.get(faction.clock.key)! },
       ...sourceFacts(args.recordId("source", `faction_${faction.key}`), faction.goal.audience, faction.goal.origin, faction.goal.citationIds),
     ] }];
   }));
   const clocks = Object.fromEntries(spine.factions.map((faction) => {
     const clock = faction.clock;
-    const id = args.recordId("clock", clock.key);
+    const id = clockIds.get(clock.key)!;
     return [id, { id, audience: clock.audience, name: clock.name, status: "UNREVEALED", current: clock.current,
       maximum: clock.segments, facts: sourceFacts(args.recordId("source", `clock_${clock.key}`), clock.audience, clock.origin, clock.citationIds) }];
   }));
@@ -171,10 +177,13 @@ function buildInitialState(args: {
       ...sourceFacts(args.recordId("source", `npc_${npc.key}`), npc.audience, npc.origin, npc.citationIds),
     ] }];
   }));
+  const clueIds = new Map(spine.startingClues.map((clue) => [clue.key, args.recordId("clue", clue.key)]));
   const quests = Object.fromEntries(spine.routes.map((route) => {
     const id = args.recordId("route", route.key);
     return [id, { id, audience: route.premise.audience, name: route.key, status: `UNREVEALED:${route.method}`, facts: [
       { id: args.recordId("fact", `route_${route.key}`), audience: route.premise.audience, kind: "Route", text: route.premise.text },
+      { id: args.recordId("fact", `route_clues_${route.key}`), audience: "DIRECTOR", kind: "Route Clues",
+        text: route.startingClueKeys.map((key) => clueIds.get(key)).join(", ") },
       ...sourceFacts(args.recordId("source", `route_${route.key}`), route.premise.audience, route.premise.origin, route.premise.citationIds),
     ] }];
   }));
@@ -186,8 +195,10 @@ function buildInitialState(args: {
       ...sourceFacts(args.recordId("source", `outcome_${outcome.key}`), outcome.audience, outcome.origin, outcome.citationIds),
     ]),
     ...spine.startingClues.flatMap((clue) => [
-      { id: args.recordId("clue", clue.key), audience: clue.audience, kind: "Clue", text: clue.text },
-      ...sourceFacts(args.recordId("source", `clue_${clue.key}`), clue.audience, clue.origin, clue.citationIds),
+      { id: clueIds.get(clue.key)!, audience: "DIRECTOR" as const, kind: "Undiscovered Clue", text: clue.text },
+      ...(clue.discovery ? [{ id: args.recordId("fact", `discovery_${clue.key}`), audience: "DIRECTOR" as const,
+        kind: "Discovery Condition", text: `${clueIds.get(clue.key)}: ${clue.discovery}`.slice(0, 2000) }] : []),
+      ...sourceFacts(args.recordId("source", `clue_${clue.key}`), "DIRECTOR", clue.origin, clue.citationIds),
     ]),
   ];
   const flags = spine.riskTags.map((risk) => ({ id: args.recordId("risk", risk.key), audience: risk.audience,
@@ -198,7 +209,7 @@ function buildInitialState(args: {
       currentLocationId: args.locationId, sceneId: args.sceneId, rngCounter: 0 },
     table: { rulesEdition: "SRD_5_1", settingDateDr: 1375, diceMode: "SERVER_OPEN", deathMode: "STANDARD", houseRules: [] },
     actors: Object.fromEntries(builds.map((build) => [build.actorId, actor(build, runtimeEquipment.get(build.actorId) ?? [])])),
-    inventory, combat: null, locations, npcs, factions, quests, facts,
+    inventory, combat: null, campaignProgress: { phase: "OPENING", milestone: decision.situation }, locations, npcs, factions, quests, facts,
     events: [{ id: args.recordId("journal", "campaign_start"), audience: "PARTY", kind: "Campaign Journal", text: spine.opening.pressure.text }],
     clocks, flags, currentDecision: decision,
   });
@@ -213,7 +224,9 @@ function reconstruct(campaign: ReturnType<CampaignRepository["getCampaign"]>): C
       proficiencyBonus: value.proficiencyBonus, armorClass: value.armorClass, maxHp: value.maxHp, speed: value.speed }))
     .sort((left, right) => left.controller.localeCompare(right.controller));
   return { campaignId: campaign.id, sourcePackHash: campaign.sourcePackHash,
-    visibleOpening: campaign.currentDecision.situation, characters,
+    visibleOpening: campaign.currentState.openingNarration
+      ?? campaign.currentState.events.find((event) => event.kind === "Campaign Journal" && event.audience === "PARTY")?.text
+      ?? campaign.currentDecision.situation, characters,
     currentDecision: campaign.currentDecision, stateHash: campaign.currentStateHash };
 }
 
@@ -249,13 +262,18 @@ export function createCampaignBuilder(deps: CampaignBuilderDependencies): Campai
         characters: [ownership.bill, ownership.raven].map((character) => ({ controller: character.controller,
           name: character.name, classSourceKey: character.classSourceKey, ancestrySourceKey: character.ancestrySourceKey,
           backgroundSourceKey: character.backgroundSourceKey, characterHook: character.characterHook })) });
-      const spine = request.creationMode === "QUICKSTART"
-        ? createQuickstartCampaignSpine(spineInput)
-        : CampaignSpineProposalSchema.parse(await deps.spine.generate(spineInput));
+      const spine = CampaignSpineProposalSchema.parse(await deps.spine.generate(spineInput));
       const campaignId = ids.campaign();
       const branchId = ids.branch();
       const state = buildInitialState({ request, spine, bill: ownership.bill, raven: ownership.raven, catalog,
         campaignId, locationId: ids.location(), sceneId: ids.scene(), decisionId: ids.decision(), recordId: ids.record });
+      const openingView = projectSharedNarrationView(state);
+      const opening = `${spine.opening.locationName}. ${spine.opening.location.text} ${spine.opening.pressure.text}`;
+      try {
+        state.openingNarration = (await deps.narrator?.narrateOpening?.(openingView, opening))?.trim().slice(0, 8000) || opening;
+      } catch {
+        state.openingNarration = opening;
+      }
       const stateHash = sha256Json(state);
       const seed = (deps.rngSeed ?? (() => randomBytes(32)))();
       const createdAt = now();

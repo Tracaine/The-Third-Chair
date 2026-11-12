@@ -34,6 +34,12 @@ export const CharacterDraftSchema = z.object({
   abilityMethod: z.literal("STANDARD_ARRAY"),
   abilities: AbilityScoresSchema,
   skillKeys: z.array(ChoiceKeySchema),
+  ancestryAbilityKeys: z.array(AbilityNameSchema).optional(),
+  languageChoices: z.array(ChoiceKeySchema).optional(),
+  featureChoiceKeys: z.array(ChoiceKeySchema).optional(),
+  expertiseKeys: z.array(ChoiceKeySchema).optional(),
+  ancestryCantripKey: ChoiceKeySchema.optional(),
+  preparedSpellKeys: z.array(ChoiceKeySchema).optional(),
   equipmentChoiceKeys: z.array(ChoiceKeySchema),
   spellKeys: z.array(ChoiceKeySchema),
   characterHook: CharacterTextSchema,
@@ -49,6 +55,23 @@ export const CharacterResourceSchema = z.object({
 export const SpellSlotStateSchema = z.object({
   current: z.number().int().nonnegative(),
   maximum: z.number().int().nonnegative(),
+}).strict();
+
+export const CharacterMechanicsSchema = z.object({
+  proficiencies: z.array(ChoiceKeySchema),
+  languages: z.array(ChoiceKeySchema),
+  features: z.array(ChoiceKeySchema),
+  expertise: z.array(ChoiceKeySchema),
+  spellcasting: z.object({
+    ability: AbilityNameSchema,
+    saveDc: z.number().int(),
+    attackBonus: z.number().int(),
+    slotRecovery: z.enum(["LONG_REST", "SHORT_REST"]),
+    spellbook: z.array(PersistedIdSchema),
+    spellLevels: z.record(PersistedIdSchema, z.number().int().nonnegative()).optional(),
+    spellNames: z.record(PersistedIdSchema, ChoiceKeySchema),
+  }).strict().optional(),
+  ancestryCantrip: z.object({ id: PersistedIdSchema, name: ChoiceKeySchema, ability: AbilityNameSchema }).strict().optional(),
 }).strict();
 
 export const CharacterBuildSchema = CharacterDraftSchema.pick({
@@ -72,6 +95,9 @@ export const CharacterBuildSchema = CharacterDraftSchema.pick({
   skillProficiencies: z.array(ChoiceKeySchema),
   speed: z.number().int().nonnegative(),
   equipmentIds: z.array(PersistedIdSchema),
+  equipmentQuantities: z.record(PersistedIdSchema, z.number().int().positive()).optional(),
+  equipmentSlots: z.record(PersistedIdSchema, z.array(ChoiceKeySchema)).optional(),
+  mechanics: CharacterMechanicsSchema.optional(),
   resources: z.record(PersistedIdSchema, CharacterResourceSchema),
   spells: z.array(PersistedIdSchema),
   spellSlots: z.record(z.string().regex(/^[1-9]$/), SpellSlotStateSchema),
