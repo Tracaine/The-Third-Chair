@@ -13,8 +13,8 @@ const documents: SourceDocumentRecord[] = [
 
 const hash = (index: number) => index.toString(16).padStart(64, "0");
 
-export function createRetrievalFixture(): { db: DatabaseSync; service: SqliteSourcePackService } {
-  const db = openSourcePackForBuild(":memory:"); const writer = new SourcePackWriter(db);
+export function createRetrievalFixture(databasePath = ":memory:"): { db: DatabaseSync; service: SqliteSourcePackService } {
+  const db = openSourcePackForBuild(databasePath); const writer = new SourcePackWriter(db);
   documents.forEach((document) => writer.insertDocument(document));
   writer.insertManifest({ sourcePackManifestHash: "fixture-manifest" });
   const ruleTerms = ["advantage", "concentration", "long rest", "death saving throws", "cover"];

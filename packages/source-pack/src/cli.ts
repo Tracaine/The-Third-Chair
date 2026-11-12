@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import aliases from "../config/aliases.v1.json" with { type: "json" };
 import selection from "../config/frcs-selection.v1.json" with { type: "json" };
 import cases from "../test/fixtures/retrieval-cases.json" with { type: "json" };
@@ -67,7 +68,7 @@ export async function main(argv = process.argv.slice(2)): Promise<void> {
   } finally { db.close(); }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   main().catch((error: unknown) => {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exitCode = 1;
