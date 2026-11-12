@@ -4,9 +4,9 @@ import { loadAgentConfig } from "../src/config.js";
 describe("loadAgentConfig", () => {
   it("loads the bounded runtime defaults", () => {
     expect(loadAgentConfig({})).toEqual({
-      directorModel: "gpt-5.6-sol",
+      directorModel: "gpt-6-sol",
       directorReasoning: "low",
-      narratorModel: "gpt-5.6-sol",
+      narratorModel: "gpt-6-sol",
       narratorReasoning: "low",
       traceMode: "off",
       directorTimeoutMs: 90_000,
@@ -18,11 +18,11 @@ describe("loadAgentConfig", () => {
     expect(() => loadAgentConfig({ DIRECTOR_MODEL: "unsupported-model" })).toThrow();
     expect(() => loadAgentConfig({ NARRATOR_MODEL: "unsupported-model" })).toThrow();
     expect(loadAgentConfig({
-      DIRECTOR_MODEL: "gpt-5.6-sol",
-      NARRATOR_MODEL: "gpt-5.6-sol",
+      DIRECTOR_MODEL: "gpt-6-sol",
+      NARRATOR_MODEL: "gpt-6-sol",
     })).toMatchObject({
-      directorModel: "gpt-5.6-sol",
-      narratorModel: "gpt-5.6-sol",
+      directorModel: "gpt-6-sol",
+      narratorModel: "gpt-6-sol",
     });
   });
 
