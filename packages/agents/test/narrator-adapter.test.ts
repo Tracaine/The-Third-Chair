@@ -22,7 +22,7 @@ describe("Narrator adapter", () => {
       mustIncludeResolutionIds: [], mustIncludeEventIds: [], visibleEventIds: [] };
     const run: AgentRunClient["run"] = async (agent, serialized, options) => {
       expect(agent.name).toBe("Third Chair Narrator");
-      expect(agent.model).toBe("gpt-5.6-sol");
+      expect(agent.model).toBe("gpt-6-sol");
       expect(agent.modelSettings).toEqual({ reasoning: { effort: "medium" }, text: { verbosity: "low" } });
       expect(agent.tools).toEqual([]);
       expect(agent.outputType).toBe(NarrationSchema);
